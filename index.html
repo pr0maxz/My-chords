@@ -102,9 +102,9 @@
     /* บรรทัดดนตรี INTRO / INSTRU */
     .instru-row {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.28em;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.22em;
       margin-bottom: 0.32em;
       padding: 0.24em 0.48em;
       background-color: rgba(15, 23, 42, 0.72);
@@ -118,6 +118,14 @@
       font-size: 0.86em;
       color: #38bdf8;
       letter-spacing: 0.03em;
+    }
+
+    .instru-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.28em;
+      width: 100%;
     }
 
     .instru-pipe {
@@ -1212,6 +1220,16 @@ INSTRU : Em | Em | Em | D | Em | D | Em | Em | Em Bm
     const CHORD_TOKEN_REGEX = /^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?$/;
     const INLINE_CHORD_REGEX = /\[([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)\]|([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)/g;
 
+    const CHORD_UNIT_SOURCE = '[A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\\/[A-G][#b]?)?';
+    const CHORD_SEQUENCE_REGEX = new RegExp('^(?:' + CHORD_UNIT_SOURCE + ')+$');
+
+    // แยกคอร์ดที่เขียนติดกัน เช่น "GmAm" เป็น ["Gm", "Am"] ถ้าไม่ใช่คอร์ดล้วนจะคืนค่า null
+    function splitChordSequence(token) {
+      if (!token || !CHORD_SEQUENCE_REGEX.test(token)) return null;
+      const units = token.match(new RegExp(CHORD_UNIT_SOURCE, 'g'));
+      return units && units.join('') === token ? units : null;
+    }
+
     function isChordOnlyLine(line) {
       const trimmed = line.trim();
       if (!trimmed) return false;
@@ -1327,6 +1345,27 @@ INSTRU : Em | Em | Em | D | Em | D | Em | Em | Em Bm
       return tokens.length > 0 ? tokens : [{ chord: '', lyric: line }];
     }
 
+    // แปลง "/" ที่ยืนเดี่ยว ๆ (เช่น Em / Em / D) ให้เป็น "|" เพื่อใช้รูปแบบเดียวกัน
+    // ไม่แตะคอร์ดที่มีเบส เช่น D/F# เพราะไม่มีช่องว่างคั่น
+    function normalizeInstruSeparators(text) {
+      return text.replace(/(^|\s)\/(?=\s|$)/g, '$1|');
+    }
+
+    // บรรทัดที่ขึ้นบรรทัดใหม่ต่อจาก INTRO/INSTRU/SOLO/OUTRO ให้รวมอยู่ในกล่องเดียวกัน
+    // ต้องมีแต่คอร์ดกับ | หรือ / และขึ้นต้นด้วยตัวคั่นหรือบรรทัดก่อนหน้าจบด้วยตัวคั่น
+    function isInstruContinuation(line, prevText) {
+      const t = line.trim();
+      if (!t) return false;
+      if (/^(INTRO|INSTRU|SOLO|OUTRO|\(\s*ซ้ำ|\*)/i.test(t)) return false;
+      const norm = normalizeInstruSeparators(t);
+      const tokens = norm.replace(/[|()\-–—:]/g, ' ').trim().split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) return false;
+      if (!tokens.every((tok) => splitChordSequence(tok))) return false;
+      const hasSeparator = norm.indexOf('|') !== -1;
+      const prevEndsWithSeparator = /\|\s*$/.test(normalizeInstruSeparators(prevText));
+      return hasSeparator || prevEndsWithSeparator;
+    }
+
     function parseSongLyricsToStanzas(rawLyrics) {
       // ลบบรรทัดว่างเดี่ยวๆ ที่คั่นระหว่างบรรทัดร้องเพื่อให้ท่อนเพลงไม่แตกเป็นกล่องทีละ 1 แถว
       const rawLines = rawLyrics.replace(/\r\n/g, '\n').split('\n');
@@ -1356,8 +1395,14 @@ INSTRU : Em | Em | Em | D | Em | D | Em | Em | Em Bm
         }
 
         if (/^(INTRO|INSTRU|SOLO|OUTRO)\b/i.test(trimmed)) {
-          parsedRows.push({ type: 'instru', text: trimmed });
-          i++;
+          let instruText = normalizeInstruSeparators(trimmed);
+          let j = i + 1;
+          while (j < cleanedLines.length && isInstruContinuation(cleanedLines[j], instruText)) {
+            instruText += '\n' + normalizeInstruSeparators(cleanedLines[j].trim());
+            j++;
+          }
+          parsedRows.push({ type: 'instru', text: instruText });
+          i = j;
           continue;
         }
 
@@ -1468,26 +1513,35 @@ INSTRU : Em | Em | Em | D | Em | D | Em | Em | Em Bm
         if (row.type === 'instru') {
           const instruDiv = document.createElement('div');
           instruDiv.className = 'instru-row';
-          const transposedText = transposeLine(row.text, transposeOffset);
-          const parts = transposedText.split(/(\s+|\|)/);
-          parts.forEach((part) => {
-            if (!part) return;
-            if (part === '|') {
-              const pipe = document.createElement('span');
-              pipe.className = 'instru-pipe';
-              pipe.textContent = '|';
-              instruDiv.appendChild(pipe);
-            } else if (CHORD_TOKEN_REGEX.test(part.trim())) {
-              const badge = document.createElement('span');
-              badge.className = 'chord-tag';
-              badge.textContent = part.trim();
-              instruDiv.appendChild(badge);
-            } else if (part.trim()) {
-              const label = document.createElement('span');
-              label.className = 'instru-tag';
-              label.textContent = part.trim();
-              instruDiv.appendChild(label);
-            }
+          row.text.split('\n').forEach((lineText) => {
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'instru-line';
+            lineText.split(/(\s+|\|)/).forEach((part) => {
+              const piece = part.trim();
+              if (!piece) return;
+              if (piece === '|') {
+                const pipe = document.createElement('span');
+                pipe.className = 'instru-pipe';
+                pipe.textContent = '|';
+                lineDiv.appendChild(pipe);
+                return;
+              }
+              const chords = splitChordSequence(piece);
+              if (chords) {
+                chords.forEach((c) => {
+                  const badge = document.createElement('span');
+                  badge.className = 'chord-tag';
+                  badge.textContent = transposeSingleChord(c, transposeOffset);
+                  lineDiv.appendChild(badge);
+                });
+              } else {
+                const label = document.createElement('span');
+                label.className = 'instru-tag';
+                label.textContent = transposeLine(piece, transposeOffset);
+                lineDiv.appendChild(label);
+              }
+            });
+            instruDiv.appendChild(lineDiv);
           });
           card.appendChild(instruDiv);
         } else if (row.type === 'repeat') {
