@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>เว็บอ่านคอร์ดพร้อมเนื้อเพลงสำหรับ Tablet</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#131822">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="อ่านคอร์ด">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ตั้งค่าพื้นฐานสำหรับการใช้งานบน Tablet (Dark Mode สบายตา & ล็อกหน้าจอเดียว 100%) */
+    :root {
+      --bg-main: #0b0e14;
+      --bg-panel: #131822;
+      --bg-card: #1a2130;
+      --chord-gold: #fbbf24;
+      --chord-pill-bg: rgba(251, 191, 36, 0.14);
+      --border-subtle: #263042;
+      --fit-font-size: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-main);
+      color: #f1f5f9;
+      font-family: 'Sarabun', 'Noto Sans Thai', 'Inter', system-ui, sans-serif;
+    }
+
+    /* โครงสร้างการวางคอร์ดเหนือเนื้อเพลงแบบล็อกแนวตรงกัน (Zero Overlap) */
+    .lyric-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      row-gap: 0.22em;
+      margin-bottom: 0.28em;
+    }
+
+    .word-group {
+      display: inline-flex;
+      align-items: flex-end;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .token-unit {
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-start;
+      vertical-align: bottom;
+    }
+
+    .chord-slot {
+      display: flex;
+      align-items: flex-end;
+      min-height: 1.28em;
+      padding-right: 0.22em;
+      margin-bottom: 0.06em;
+    }
+
+    .chord-tag {
+      font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 800;
+      font-size: 0.86em;
+      line-height: 1.1;
+      color: var(--chord-gold);
+      background-color: var(--chord-pill-bg);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      padding: 0.08em 0.34em;
+      border-radius: 0.3em;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .lyric-syllable {
+      font-size: 1em;
+      line-height: 1.32;
+      color: #f8fafc;
+      white-space: pre-wrap;
+      font-weight: 500;
+    }
+
+    /* บรรทัดดนตรี INTRO / INSTRU */
+    .instru-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.28em;
+      margin-bottom: 0.32em;
+      padding: 0.24em 0.48em;
+      background-color: rgba(15, 23, 42, 0.72);
+      border-radius: 0.45em;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .instru-tag {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 0.86em;
+      color: #38bdf8;
+      letter-spacing: 0.03em;
+    }
+
+    .instru-pipe {
+      color: #475569;
+      font-weight: 700;
+      font-size: 0.86em;
+    }
+
+    /* บรรทัดสัญลักษณ์การซ้ำ */
+    .repeat-row {
+      font-size: 0.9em;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-top: 0.1em;
+      margin-bottom: 0.24em;
+    }
+
+    /* โครงสร้างคอลัมน์ในหน้าเดียว */
+    .song-columns-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      gap: 0.5rem 0.8rem;
+      align-items: start;
+      font-size: var(--fit-font-size);
+    }
+
+    .song-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.34em;
+      min-width: 0;
+      height: max-content;
+    }
+
+    .stanza-card {
+      background-color: rgba(26, 33, 48, 0.68);
+      border: 1px solid #263042;
+      border-radius: 0.65rem;
+      padding: 0.36em 0.55em;
+    }
+
+    /* ปรับแต่ง Scrollbar สำหรับ Dropdown ค้นหาและ Modal */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #131822;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2d384d;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="flex flex-col">
+
+  <!-- =====================================================================
+       1. แถบควบคุมด้านบนแบบ 2 แถว (ป้องกันปุ่มเบียดกันบน Tablet & ช่องค้นหากว้างเต็มตา)
+       ===================================================================== -->
+  <header class="shrink-0 z-40 bg-[#131822] border-b border-[#263042] px-2 sm:px-4 py-1.5 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-col gap-1.5">
+
+      <!-- แถวที่ 1: ค้นหาเพลง + ลิสต์เพลง + บันทึก/ซิงค์ + เพิ่มเพลง (ไอคอนอย่างเดียวเมื่อจอแคบ) -->
+      <div class="flex items-center gap-1.5 w-full">
+        <div id="searchContainer" class="relative flex-1 min-w-0">
+          <div class="flex items-center bg-[#1a2130] border border-[#2d384d] focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/20 rounded-xl px-3 h-10 transition">
+            <svg class="w-4 h-4 text-slate-400 shrink-0 mr-2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="ค้นหาชื่อเพลง หรือศิลปิน..."
+              autocomplete="off"
+              class="w-full min-w-0 bg-transparent border-none outline-none text-base text-slate-100 placeholder-slate-400"
+            />
+            <button
+              type="button"
+              id="clearSearchBtn"
+              aria-label="ล้างคำค้นหา"
+              class="hidden items-center justify-center w-7 h-7 rounded-full bg-slate-700/80 hover:bg-slate-600 text-slate-200 text-sm ml-1.5 shrink-0 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- รายการผลการค้นหาแบบ Dropdown -->
+          <div
+            id="searchDropdown"
+            class="hidden absolute left-0 right-0 top-[calc(100%+6px)] bg-[#161c28] border border-[#2d384d] rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 divide-y divide-[#263042]"
+          ></div>
+        </div>
+
+        <button
+          type="button"
+          id="openSetlistModalBtn"
+          aria-label="จัดลิสต์เพลง"
+          class="h-10 px-3 rounded-xl bg-[#1a2130] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-sky-300 font-bold text-sm flex items-center gap-1.5 shrink-0 transition cursor-pointer"
+        >
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span class="hidden md:inline">ลิสต์เพลง</span>
+          <span id="setlistCountBadge" class="px-1.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-xs font-extrabold">0</span>
+        </button>
+
+        <button
+          type="button"
+          id="openOfflineModalBtn"
+          aria-label="สถานะคลาวด์และบันทึกลงเครื่อง"
+          class="h-10 px-3 rounded-xl bg-[#1a2130] hover:bg-slate-800 active:scale-95 border border-emerald-500/35 text-emerald-300 font-bold text-sm flex items-center gap-1.5 shrink-0 transition cursor-pointer"
+        >
+          <span id="networkStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
+          <span id="cloudSyncHeaderLabel" class="hidden md:inline">บันทึกลงเครื่อง</span>
+        </button>
+
+        <button
+          type="button"
+          id="openAddModalBtn"
+          aria-label="เพิ่มเพลงใหม่"
+          class="h-10 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-sm flex items-center gap-1.5 shrink-0 shadow-md transition cursor-pointer"
+        >
+          <span class="text-lg leading-none">+</span>
+          <span class="hidden sm:inline">เพิ่มเพลง</span>
+        </button>
+      </div>
+
+      <!-- แถวที่ 2: ปรับขนาดอักษร / คำนวณคีย์จากแฟลต-ชาร์ป / ทรานสโพส -->
+      <div class="flex flex-wrap items-stretch gap-1.5 w-full lg:justify-between">
+        <div class="flex items-center gap-1 bg-[#1a2130] border border-[#2d384d] rounded-xl p-0.5 h-10 flex-1 lg:flex-none justify-center" role="group" aria-label="ปรับขนาดตัวอักษร">
+          <button type="button" id="btnFontDown" aria-label="ลดขนาดตัวอักษร" class="w-9 h-9 rounded-lg bg-[#131822] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-slate-200 font-extrabold text-sm flex items-center justify-center transition cursor-pointer">A−</button>
+          <span id="fontScaleLabel" class="min-w-[42px] text-center text-xs font-extrabold text-slate-300 select-none">100%</span>
+          <button type="button" id="btnFontUp" aria-label="เพิ่มขนาดตัวอักษร" class="w-9 h-9 rounded-lg bg-[#131822] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-slate-200 font-extrabold text-sm flex items-center justify-center transition cursor-pointer">A+</button>
+        </div>
+
+        <!-- คำนวณคีย์จากจำนวนแฟลต / ชาร์ป -->
+        <div class="flex items-center gap-2 bg-[#1a2130] border border-[#2d384d] rounded-xl px-2 h-10 flex-1 lg:flex-none justify-evenly lg:justify-center" role="group" aria-label="คำนวณคีย์จากจำนวนแฟลตหรือชาร์ป">
+          <label class="flex items-center gap-1.5 text-xs font-bold text-slate-300 whitespace-nowrap">
+            <input type="number" id="inputFlatCount" min="0" max="7" inputmode="numeric" placeholder="0" aria-label="จำนวนแฟลต" class="w-10 h-9 text-center rounded-lg bg-[#131822] border border-[#2d384d] focus:border-amber-400 outline-none text-sm font-bold text-white" />
+            <span>แฟลต=</span>
+            <span id="flatKeyResult" class="min-w-[1.5rem] text-sm font-extrabold text-amber-300">–</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-xs font-bold text-slate-300 whitespace-nowrap">
+            <input type="number" id="inputSharpCount" min="0" max="7" inputmode="numeric" placeholder="0" aria-label="จำนวนชาร์ป" class="w-10 h-9 text-center rounded-lg bg-[#131822] border border-[#2d384d] focus:border-amber-400 outline-none text-sm font-bold text-white" />
+            <span>ชาร์ป=</span>
+            <span id="sharpKeyResult" class="min-w-[1.5rem] text-sm font-extrabold text-amber-300">–</span>
+          </label>
+        </div>
+
+        <!-- ชุดควบคุมทรานสโพสทั้งเพลง (Transpose Controls) -->
+        <div class="flex items-center justify-between gap-1 bg-[#1a2130] border border-[#2d384d] rounded-xl p-0.5 h-10 w-full sm:w-auto sm:flex-1 lg:flex-none">
+          <button type="button" id="btnTransposeDown" aria-label="ลดคีย์ครึ่งเสียง" class="w-10 h-9 rounded-lg bg-[#131822] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-white font-extrabold text-xl flex items-center justify-center transition cursor-pointer">−</button>
+          <div class="flex-1 min-w-[96px] sm:min-w-[110px] px-1 text-center leading-tight">
+            <div id="currentKeyDisplay" class="text-xs sm:text-sm font-extrabold text-amber-400">Key A (F#m)</div>
+            <div id="semitoneDisplay" class="text-[10px] font-semibold text-slate-400">คีย์ต้นฉบับ (0)</div>
+          </div>
+          <button type="button" id="btnTransposeUp" aria-label="เพิ่มคีย์ครึ่งเสียง" class="w-10 h-9 rounded-lg bg-[#131822] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-white font-extrabold text-xl flex items-center justify-center transition cursor-pointer">+</button>
+          <button type="button" id="btnTransposeReset" aria-label="รีเซ็ตกลับคีย์ต้นฉบับ" class="h-9 px-2.5 rounded-lg bg-[#131822] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-sky-400 font-bold text-xs sm:text-sm flex items-center justify-center transition cursor-pointer">รีเซ็ต</button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       2. พื้นที่แสดงเนื้อเพลงและคอร์ดแบบหน้าเดียวจบ (Single-Screen No-Scroll)
+       ===================================================================== -->
+  <main class="flex-1 min-h-0 w-full max-w-7xl mx-auto p-1.5 sm:p-2.5 flex flex-col overflow-hidden">
+    <section class="flex-1 min-h-0 bg-[#131822] border border-[#263042] rounded-2xl p-2 sm:p-3 shadow-xl flex flex-col overflow-hidden">
+
+      <!-- ส่วนหัวชื่อเพลง ศิลปิน คีย์ ตัวเลื่อนลิสต์ และปุ่มลบเพลง -->
+      <div class="shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 pb-1.5 mb-1.5 border-b border-[#263042]">
+        <div class="flex items-baseline gap-x-2 min-w-0 max-w-full">
+          <h1 id="songTitle" class="text-lg sm:text-xl font-extrabold text-white tracking-tight truncate">
+            ราชันย์ฝันสลาย
+          </h1>
+          <p id="songArtist" class="text-sm font-medium text-slate-400 truncate">
+            แอ๊ด คาราบาว
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 w-full md:w-auto min-w-0">
+          <!-- แถบเลื่อนเพลงใน Setlist (แสดงเมื่อเพลงนี้อยู่ในลิสต์) -->
+          <div id="setlistNavBar" class="hidden items-center justify-between gap-1 flex-1 md:flex-none bg-[#1a2130] border border-sky-500/40 rounded-xl p-0.5 shadow-md">
+            <button
+              type="button"
+              id="btnPrevInSetlist"
+              aria-label="เพลงก่อนหน้าในลิสต์"
+              class="h-9 px-3 rounded-lg bg-[#131822] hover:bg-sky-500/20 active:scale-95 border border-sky-500/30 text-sky-300 font-extrabold text-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+            >
+              <span class="text-sm leading-none">◀</span>
+              <span class="hidden sm:inline">ก่อนหน้า</span>
+            </button>
+            <button
+              type="button"
+              id="setlistPositionBtn"
+              aria-label="เปิดดูรายการเพลงในลิสต์"
+              class="flex-1 min-w-0 h-9 px-2 rounded-lg hover:bg-slate-800/70 flex flex-col items-center justify-center leading-tight cursor-pointer select-none"
+            >
+              <span id="setlistNameLabel" class="text-[10px] font-semibold text-slate-400 max-w-[110px] truncate">
+                ลิสต์เล่นสดหลัก
+              </span>
+              <span id="setlistPositionLabel" class="text-xs font-extrabold text-sky-300 whitespace-nowrap">
+                เพลงที่ 1 / 4
+              </span>
+            </button>
+            <button
+              type="button"
+              id="btnNextInSetlist"
+              aria-label="เพลงถัดไปในลิสต์"
+              class="h-9 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-1.5 shadow transition cursor-pointer"
+            >
+              <span class="hidden sm:inline">ถัดไป</span>
+              <span class="text-sm leading-none">▶</span>
+            </button>
+          </div>
+
+          <!-- ปุ่มเพิ่ม/นำเพลงนี้ออกจากลิสต์ปัจจุบัน -->
+          <button
+            type="button"
+            id="toggleSongInSetlistBtn"
+            aria-label="เพิ่มหรือนำออกจากลิสต์"
+            class="h-9 px-3 rounded-full bg-[#1a2130] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-slate-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+          >
+            <span id="toggleSetlistIcon">+</span>
+            <span id="toggleSetlistText">ใส่ลิสต์</span>
+          </button>
+
+          <span id="originalKeyBadge" class="px-2.5 py-1 rounded-full bg-[#1a2130] border border-[#2d384d] text-xs font-bold text-sky-300 whitespace-nowrap">
+            ต้นฉบับ: Key A (F#m)
+          </span>
+          <button
+            type="button"
+            id="openEditModalBtn"
+            aria-label="แก้ไขเพลงนี้"
+            class="ml-auto h-9 px-3 rounded-full bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 border border-amber-500/35 text-amber-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+            </svg>
+            <span class="hidden sm:inline">แก้ไข</span>
+          </button>
+          <button
+            type="button"
+            id="openDeleteModalBtn"
+            aria-label="ลบเพลงนี้"
+            class="h-9 px-3 rounded-full bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 border border-rose-500/35 text-rose-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+            <span class="hidden sm:inline">ลบเพลง</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- พื้นที่คอลัมน์ท่อนเพลง (ปรับจำนวนคอลัมน์และขนาดฟอนต์อัตโนมัติให้จบในหน้าเดียว) -->
+      <div id="lyricsViewport" class="flex-1 min-h-0 w-full overflow-hidden">
+        <div id="songContentGrid" class="song-columns-grid"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- =====================================================================
+       3. หน้าต่างยืนยันการลบเพลง (Custom Delete Confirmation Modal)
+       ===================================================================== -->
+  <div id="deleteSongModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#131822] border border-[#2d384d] rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-base font-extrabold text-white">ยืนยันการลบเพลง</h3>
+          <p id="deleteModalMessage" class="text-xs sm:text-sm text-slate-400 mt-0.5">
+            ต้องการลบเพลงนี้ออกจากคลังใช่หรือไม่?
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-1">
+        <button type="button" id="cancelDeleteBtn" class="h-10 px-4 rounded-xl bg-[#1a2130] hover:bg-slate-700 text-slate-300 font-bold text-sm cursor-pointer">
+          ยกเลิก
+        </button>
+        <button type="button" id="confirmDeleteBtn" class="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm shadow-lg cursor-pointer">
+          ยืนยันลบเพลง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       4. หน้าต่างเพิ่มเพลงใหม่ (Add Song Modal)
+       ===================================================================== -->
+  <div id="addSongModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#131822] border border-[#2d384d] rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
+
+      <!-- ส่วนหัว Modal -->
+      <div class="shrink-0 flex items-center justify-between pb-3 mb-4 border-b border-[#263042]">
+        <h2 id="addSongModalTitle" class="text-lg sm:text-xl font-extrabold text-white">เพิ่มเพลงใหม่ลงคลัง</h2>
+        <button
+          type="button"
+          id="closeAddModalBtn"
+          aria-label="ปิดหน้าต่าง"
+          class="w-9 h-9 rounded-full bg-[#1a2130] hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- แถบแจ้งสถานะการบันทึก -->
+      <div class="shrink-0 mb-4 p-3 rounded-xl bg-[#1a2130]/90 border border-[#2d384d] flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
+        <div class="min-w-0">
+          <div class="text-xs sm:text-sm font-extrabold text-emerald-300">บันทึกอัตโนมัติลงเครื่อง & ซิงค์ Cloudflare</div>
+          <div id="offlineStorageStatusText" class="text-[11px] text-slate-400">
+            เพลงที่เพิ่มจะถูกเก็บไว้ในเครื่องนี้ และส่งไปบันทึกที่ Cloudflare อัตโนมัติเมื่อเชื่อมต่อ
+          </div>
+        </div>
+      </div>
+
+      <!-- ฟอร์มกรอกข้อมูลเพลงและวางคอร์ด -->
+      <form id="addSongForm" class="flex-1 min-h-0 flex flex-col gap-3.5 overflow-y-auto pr-1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+          <div>
+            <label for="inputNewTitle" class="block text-xs font-bold text-slate-300 mb-1">ชื่อเพลง *</label>
+            <input
+              type="text"
+              id="inputNewTitle"
+              required
+              placeholder="เช่น ราชันย์ฝันสลาย"
+              class="w-full h-11 px-3 rounded-xl bg-[#1a2130] border border-[#2d384d] focus:border-amber-400 outline-none text-sm text-white"
+            />
+          </div>
+          <div>
+            <label for="inputNewArtist" class="block text-xs font-bold text-slate-300 mb-1">ศิลปิน</label>
+            <input
+              type="text"
+              id="inputNewArtist"
+              placeholder="เช่น แอ๊ด คาราบาว"
+              class="w-full h-11 px-3 rounded-xl bg-[#1a2130] border border-[#2d384d] focus:border-amber-400 outline-none text-sm text-white"
+            />
+          </div>
+          <div>
+            <label for="inputNewKey" class="block text-xs font-bold text-slate-300 mb-1">คีย์ต้นฉบับ</label>
+            <select
+              id="inputNewKey"
+              class="w-full h-11 px-3 rounded-xl bg-[#1a2130] border border-[#2d384d] focus:border-amber-400 outline-none text-sm text-white"
+            >
+              <option value="AUTO">ตรวจจับอัตโนมัติ</option>
+              <option value="C">Key C (Am)</option>
+              <option value="C#">Key C# (A#m)</option>
+              <option value="Db">Key Db (Bbm)</option>
+              <option value="D">Key D (Bm)</option>
+              <option value="Eb">Key Eb (Cm)</option>
+              <option value="E">Key E (C#m)</option>
+              <option value="F">Key F (Dm)</option>
+              <option value="F#">Key F# (D#m)</option>
+              <option value="Gb">Key Gb (Ebm)</option>
+              <option value="G">Key G (Em)</option>
+              <option value="Ab">Key Ab (Fm)</option>
+              <option value="A">Key A (F#m)</option>
+              <option value="Bb">Key Bb (Gm)</option>
+              <option value="B">Key B (G#m)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex-1 min-h-[160px] flex flex-col">
+          <label for="inputNewLyrics" class="block text-xs font-bold text-slate-300 mb-1">
+            วางเนื้อเพลงและคอร์ด (รองรับทั้งคอร์ดอยู่บรรทัดบน, คอร์ดแทรกในคำ หรือ [คอร์ด]เนื้อเพลง) *
+          </label>
+          <textarea
+            id="inputNewLyrics"
+            required
+            rows="8"
+            placeholder="วางเนื้อเพลงพร้อมคอร์ดที่นี่..."
+            class="w-full flex-1 p-3 rounded-xl bg-[#1a2130] border border-[#2d384d] focus:border-amber-400 outline-none text-sm text-slate-100 font-mono leading-relaxed resize-none"
+          ></textarea>
+        </div>
+
+        <div class="shrink-0 flex items-center justify-end gap-2.5 pt-1">
+          <button
+            type="button"
+            id="cancelAddModalBtn"
+            class="h-11 px-4 rounded-xl bg-[#1a2130] hover:bg-slate-700 text-slate-300 font-bold text-sm cursor-pointer"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            id="submitSongBtn"
+            class="h-11 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-lg cursor-pointer"
+          >
+            บันทึกเพลง
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       5. หน้าต่างจัดลิสต์เพลง (Custom Setlist Manager Modal)
+       ===================================================================== -->
+  <div id="setlistModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#131822] border border-[#2d384d] rounded-2xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
+
+      <!-- ส่วนหัว Setlist Modal -->
+      <div class="shrink-0 flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-[#263042]">
+        <div class="flex items-center gap-2.5">
+          <h2 class="text-lg sm:text-xl font-extrabold text-white">จัดลิสต์เพลง (Setlist)</h2>
+          <span class="px-2.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-bold">
+            บันทึกในเครื่อง & CF อัตโนมัติ
+          </span>
+        </div>
+        <button
+          type="button"
+          id="closeSetlistModalBtn"
+          aria-label="ปิดหน้าต่างจัดลิสต์"
+          class="w-9 h-9 rounded-full bg-[#1a2130] hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- แถบเลือก / สร้าง / ลบลิสต์เพลง -->
+      <div class="shrink-0 flex flex-wrap items-center gap-2 mb-4 p-3 rounded-xl bg-[#1a2130] border border-[#2d384d]">
+        <select
+          id="setlistSelect"
+          aria-label="เลือกลิสต์เพลง"
+          class="h-10 px-3 rounded-lg bg-[#131822] border border-[#2d384d] focus:border-amber-400 outline-none text-sm font-bold text-white flex-1 min-w-[160px]"
+        ></select>
+
+        <div class="flex items-center gap-1.5 flex-1 min-w-[200px]">
+          <input
+            type="text"
+            id="newSetlistNameInput"
+            placeholder="ชื่อลิสต์ใหม่ เช่น คืนนี้ร้านชิล..."
+            class="h-10 px-3 rounded-lg bg-[#131822] border border-[#2d384d] focus:border-amber-400 outline-none text-sm text-white flex-1 min-w-0"
+          />
+          <button
+            type="button"
+            id="createSetlistBtn"
+            class="h-10 px-3.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs sm:text-sm shrink-0 cursor-pointer"
+          >
+            + สร้างลิสต์
+          </button>
+        </div>
+
+        <button
+          type="button"
+          id="deleteSetlistBtn"
+          class="h-10 px-3 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 font-bold text-xs shrink-0 cursor-pointer"
+        >
+          ลบลิสต์นี้
+        </button>
+      </div>
+
+      <!-- พื้นที่ 2 ฝั่ง: ซ้าย = คลังเพลงทั้งหมดสำหรับกดเพิ่ม, ขวา = ลำดับเพลงในลิสต์ -->
+      <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
+
+        <!-- ฝั่งซ้าย: เลือกเพลงจากคลังเข้าลิสต์ -->
+        <div class="flex flex-col min-h-0 bg-[#1a2130]/60 border border-[#263042] rounded-xl p-3">
+          <div class="shrink-0 flex items-center justify-between gap-2 mb-2">
+            <span class="text-xs sm:text-sm font-extrabold text-slate-300">เพลงทั้งหมดในคลัง</span>
+            <input
+              type="text"
+              id="setlistLibraryFilterInput"
+              placeholder="กรองชื่อเพลง..."
+              class="h-8 px-2.5 rounded-lg bg-[#131822] border border-[#2d384d] focus:border-amber-400 outline-none text-xs text-white w-36 sm:w-44"
+            />
+          </div>
+          <div id="setlistLibraryList" class="flex-1 min-h-0 overflow-y-auto divide-y divide-[#263042] pr-1"></div>
+        </div>
+
+        <!-- ฝั่งขวา: ลำดับเพลงในลิสต์ปัจจุบัน (เลื่อนขึ้น-ลง / กดเล่น / เอาออก) -->
+        <div class="flex flex-col min-h-0 bg-[#1a2130]/60 border border-sky-500/25 rounded-xl p-3">
+          <div class="shrink-0 flex items-center justify-between gap-2 mb-2">
+            <span id="currentSetlistHeaderTitle" class="text-xs sm:text-sm font-extrabold text-sky-300 truncate">
+              ลำดับเพลงในลิสต์ (0 เพลง)
+            </span>
+            <button
+              type="button"
+              id="playFromFirstInSetlistBtn"
+              class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shrink-0 cursor-pointer"
+            >
+              ▶ เริ่มเล่นเพลงแรก
+            </button>
+          </div>
+          <div id="setlistItemsList" class="flex-1 min-h-0 overflow-y-auto divide-y divide-[#263042] pr-1"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       6. หน้าต่างซิงค์ Cloudflare และบันทึกลงเครื่อง (Cloud & Offline Modal)
+       ===================================================================== -->
+  <div id="offlineModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#131822] border border-[#2d384d] rounded-2xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto">
+
+      <div class="flex items-center justify-between pb-3 border-b border-[#263042]">
+        <div class="flex items-center gap-2.5">
+          <span id="modalNetworkDot" class="w-3 h-3 rounded-full bg-emerald-400"></span>
+          <h2 class="text-lg font-extrabold text-white">ซิงค์ Cloudflare & บันทึกลงเครื่อง</h2>
+        </div>
+        <button
+          type="button"
+          id="closeOfflineModalBtn"
+          aria-label="ปิดหน้าต่าง"
+          class="w-9 h-9 rounded-full bg-[#1a2130] hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-[#1a2130] border border-[#2d384d] space-y-1">
+        <div id="offlineSummaryTitle" class="text-sm font-extrabold text-emerald-300">
+          สถานะ: ออนไลน์ (พร้อมซิงค์และบันทึกลง Tablet)
+        </div>
+        <p id="offlineSummaryDetail" class="text-xs text-slate-300 leading-relaxed">
+          คลังเพลงปัจจุบันมี 4 เพลง และ 1 ลิสต์เพลง
+        </p>
+        <p id="cfSyncStatusDetail" class="text-xs font-bold text-sky-300 pt-0.5">
+          Cloudflare KV: กำลังตรวจสอบการเชื่อมต่อ...
+        </p>
+      </div>
+
+      <div class="space-y-2.5">
+        <!-- วิธีที่ 1: บันทึกแคชลงหน่วยความจำเบราว์เซอร์บนเครื่อง -->
+        <button
+          type="button"
+          id="btnSaveBrowserOffline"
+          class="w-full p-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/40 text-left flex items-center justify-between gap-3 transition cursor-pointer"
+        >
+          <div>
+            <div class="text-sm font-extrabold text-emerald-300">1. บันทึกลงเครื่องนี้ (Offline Cache)</div>
+            <div class="text-xs text-slate-400 mt-0.5">ดึงเพลงล่าสุดจาก Cloudflare มาเก็บไว้ใน Tablet เพื่อเปิดเล่นตอนไม่มีเน็ต</div>
+          </div>
+          <span class="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs shrink-0">บันทึกลงเครื่อง</span>
+        </button>
+
+        <!-- วิธีที่ 2: ดาวน์โหลดเป็นไฟล์ .html ออฟไลน์พร้อมเพลงทั้งหมดในตัว -->
+        <button
+          type="button"
+          id="btnDownloadStandaloneHtml"
+          class="w-full p-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 active:scale-[0.99] border border-amber-500/40 text-left flex items-center justify-between gap-3 transition cursor-pointer"
+        >
+          <div>
+            <div class="text-sm font-extrabold text-amber-300">2. ดาวน์โหลดไฟล์ออฟไลน์ (.html)</div>
+            <div class="text-xs text-slate-400 mt-0.5">แพ็กเพลงและลิสต์ทั้งหมดเป็นไฟล์เดียว เปิดเล่นผ่านแอป Files บน Tablet ได้ทันที</div>
+          </div>
+          <span class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs shrink-0">ดาวน์โหลดไฟล์</span>
+        </button>
+      </div>
+
+      <!-- ส่วนตั้งค่า Cloudflare Worker + KV เพื่อให้เพิ่มเพลงแล้ววิ่งเข้า CF อัตโนมัติ -->
+      <div class="p-3.5 rounded-xl bg-[#0f131b] border border-[#263042] space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-extrabold text-sky-300">เชื่อมต่อ Cloudflare Worker (ซิงค์คลาวด์อัตโนมัติ)</span>
+          <button
+            type="button"
+            id="btnCopyCfFunctionCode"
+            class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 font-bold text-[11px] cursor-pointer"
+          >
+            คัดลอกโค้ด Cloudflare Worker
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            type="url"
+            id="cfWorkerUrlInput"
+            value="https://chords-api.pr0maxz.workers.dev"
+            placeholder="วางลิงก์ Worker เช่น https://chords-api.xxx.workers.dev"
+            class="flex-1 min-w-0 h-9 px-3 rounded-lg bg-[#1a2130] border border-[#2d384d] focus:border-amber-400 outline-none text-xs text-white"
+          />
+          <button
+            type="button"
+            id="btnSaveCfWorkerUrl"
+            class="h-9 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs shrink-0 cursor-pointer"
+          >
+            เชื่อมต่อ
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          อัปโหลดเฉพาะไฟล์ <code class="text-slate-200">index.html</code> ขึ้น Cloudflare Pages (ไม่ต้องใส่โฟลเดอร์ functions) แล้วนำโค้ดไปวางใน <strong class="text-slate-200">Workers & Pages → Create Worker</strong> พร้อมผูก KV ชื่อ <code class="text-amber-300">CHORDS_KV</code>
+        </p>
+      </div>
+
+      <div id="offlineActionFeedback" class="hidden p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-xs font-bold text-emerald-300"></div>
+
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 1. ฐานข้อมูลเพลงเริ่มต้น & คีย์เก็บข้อมูลในเครื่อง (LocalStorage)
+     * =========================================================================
+     */
+    const STORAGE_KEY = 'tablet_chord_reader_songs_v2';
+    const SETLIST_STORAGE_KEY = 'tablet_chord_reader_setlists_v1';
+
+    const DEFAULT_SONGS = [
+      {
+        id: 'rachan-fan-salai',
+        title: 'ราชันย์ฝันสลาย',
+        artist: 'แอ๊ด คาราบาว',
+        originalRoot: 'A',
+        originalSub: 'F#m',
+        lyrics: `* ที่เดียวไอ้[A]น้อง
+คืนนี้พี่จองโต๊ะมุมด้าน[F#m]ใน
+ขอมุมสลัว[A]ๆ รู้ตัวว่าต้องร้อง[F#m]ไห้`
+      },
+      {
+        id: 'khohai-ruay',
+        title: 'ขอให้รวย',
+        artist: 'พุ่มพวง ดวงจันทร์',
+        originalRoot: 'G',
+        originalSub: 'Em',
+        lyrics: `INTRO : Em | Em | Em | Em | D | Em | D | Em | Em | Em
+
+* [Em]ขอให้รวย ขอให้รวย ที่มาช่วยงานบุญวันนี้ [Bm]
+ให้โชค[Em]ดีโชคดี [D]สุขเกษมเปรมปรีดิ์
+ขอให้รวย ขอให้[Em]รวย..
+( ซ้ำ * )
+
+INSTRU : Em | Em | Em | D | Em | D | Em | Em | Em Bm
+
+งาน[Em]บุญไม่มีอะไรให้ มีแต่พรให้สวยๆ
+ใครมีลูก[D]หญิงลูกชาย ให้ว่า[Em]นอนสอน[D]ง่ายอีก[Em]ด้วย
+เงิน[Em]ทองให้เต็มห้องเต็มห่อ ถ้าไม่พอก็ให้ท่านถูกหวย
+ทุกท่านจงมีรา[D]ศีผ่องใส ให้ทุกข์จง[Em]โยก โศกจง[D]ไกล
+อยู่ที่ไหนจงขอให้บุญ[Em]ช่วย
+( ซ้ำ * , * )
+
+ชาว[Em]นาขอให้รวยใหญ่ ชาวไร่ก็ให้รวยด้วย
+ปวง[D]ภัยอย่าได้แผ้วพาน ให้พ้น[Em]ผ่าน ด้วย[D]แรง บุญ[Em]ช่วย
+งาน[Em]หลวงให้เพิ่มขั้นไม่ขาด งานราษฎร์ก็ให้ไปได้สวย
+มาช่วยงาน[D]บุญกันเยอะไม่เบา ขอบคุณทุก[Em]ท่าน ที่ให้เกียรติ[D]เรา
+แหละอย่าลืมซองขาวติดมือก็มา[Em]ด้วย
+( ซ้ำ * , * , * , * )`
+      },
+      {
+        id: 'jai-sang-ma',
+        title: 'ใจสั่งมา',
+        artist: 'เสก โลโซ',
+        originalRoot: 'G',
+        originalSub: 'Em',
+        lyrics: `INTRO : G | Em | C | D
+
+[G]หากจะเดินไปบอกเธอว่า[Em]รัก
+มันก็[C]กลัวจะหนักใจเธอ[D]เปล่าๆ
+[G]แต่หากจะเก็บเอาไว้ใน[Em]ใจ
+มันก็[C]อึดอัดเกินจะทน[D]ไหว
+
+* จึงอยากจะ[C]บอกให้เธอได้[D]รู้
+ว่าฉัน[Bm]นั้นแอบรักเธออยู่[Em]เต็มหัวใจ
+ไม่ว่า[Am]เธอจะคิดเช่น[D]ไร ฉันก็[G]ยอม
+
+** ก็ใจมัน[C]สั่งให้รักเธอ[D]ไป
+จะให้[Bm]ทำอย่างไรก็มัน[Em]ห้ามไม่อยู่
+จะผิดจะ[Am]ถูกก็พร้อมจะ[D]เรียนรู้ กับการ[G]รักเธอ`
+      },
+      {
+        id: 'som-san',
+        title: 'ซมซาน',
+        artist: 'เสก โลโซ',
+        originalRoot: 'C',
+        originalSub: 'Am',
+        lyrics: `INTRO : C | G | Am | Em | F | C | Dm | G
+
+[C]เคยบ้างไหมที่[G]ใจมันอ่อนล้า
+[Am]เดินหลงทางไม่[Em]รู้จะไปไหน
+[F]มองทางใดก็[C]มีแต่ความมืดมน
+[Dm]สับสนใน[G]หัวใจ
+
+* [C]เธอเข้ามาใน[G]วันที่ฉันล้ม
+[Am]ประคองฉันให้[Em]ลุกขึ้นยืนใหม่
+[F]ต่อเติมความหวัง[C]ให้คนอย่างฉัน
+[Dm]ก้าวเดินต่อไป[G]อีกครั้ง
+
+** จะไม่ลืม[C]เลยว่าใครที่[G]อยู่ข้างฉัน
+ในวันที่[Am]ฉันไม่เหลือ[Em]อะไร
+จะขอ[F]สัญญาด้วย[C]หัวใจ
+ว่าจะ[Dm]รักเธอตลอด[G]ไป (ไม่มีวันเปลี่ยน[C]แปลง)`
+      }
+    ];
+
+    // โหลดคลังเพลงจาก LocalStorage หรือใช้ค่าเริ่มต้น
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function isValidSong(s) {
+      return !!s && typeof s.id === 'string' && typeof s.title === 'string' && typeof s.lyrics === 'string';
+    }
+
+    function loadSavedSongs() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const valid = Array.isArray(parsed) ? parsed.filter(isValidSong) : [];
+          if (valid.length > 0) return valid;
+        }
+      } catch (e) {
+        console.warn('ไม่สามารถอ่านคลังเพลงจาก LocalStorage ได้', e);
+      }
+      return [...DEFAULT_SONGS];
+    }
+
+    // โหลดลิสต์เพลง (Setlists) จาก LocalStorage
+    function loadSavedSetlists(songs) {
+      try {
+        const raw = localStorage.getItem(SETLIST_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {
+        console.warn('ไม่สามารถอ่านลิสต์เพลงจาก LocalStorage ได้', e);
+      }
+      return [
+        {
+          id: 'default-setlist',
+          name: 'ลิสต์เล่นสดหลัก',
+          songIds: songs.map((s) => s.id)
+        }
+      ];
+    }
+
+    let songLibrary = loadSavedSongs();
+    let setlists = loadSavedSetlists(songLibrary);
+    let activeSetlistId = setlists[0]?.id || '';
+    let currentSongId = songLibrary[0]?.id || '';
+    let transposeOffset = 0;
+    let flatSpellingOverride = false; // true เมื่อเลือกคีย์จากแฟลต เพื่อให้คอร์ดแสดงเป็น Bb, Eb ไม่ใช่ A#, D#
+    let lastRenderedSongId = null;
+
+    function clearKeySignatureInputs() {
+      flatSpellingOverride = false;
+      ['inputFlatCount', 'inputSharpCount'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['flatKeyResult', 'sharpKeyResult'].forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = '–'; });
+    }
+    let userFontMultiplier = 1.0;
+
+    /**
+     * =========================================================================
+     * 2. ตัวแปรอ้างอิง DOM Elements
+     * =========================================================================
+     */
+    const searchContainer = document.getElementById('searchContainer');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const searchDropdown = document.getElementById('searchDropdown');
+
+    const btnFontDown = document.getElementById('btnFontDown');
+    const fontScaleLabel = document.getElementById('fontScaleLabel');
+    const btnFontUp = document.getElementById('btnFontUp');
+
+    const btnTransposeDown = document.getElementById('btnTransposeDown');
+    const currentKeyDisplay = document.getElementById('currentKeyDisplay');
+    const semitoneDisplay = document.getElementById('semitoneDisplay');
+    const btnTransposeUp = document.getElementById('btnTransposeUp');
+    const btnTransposeReset = document.getElementById('btnTransposeReset');
+
+    const songTitleEl = document.getElementById('songTitle');
+    const songArtistEl = document.getElementById('songArtist');
+    const originalKeyBadge = document.getElementById('originalKeyBadge');
+    const lyricsViewport = document.getElementById('lyricsViewport');
+    const songContentGrid = document.getElementById('songContentGrid');
+
+    // Setlist elements
+    const openSetlistModalBtn = document.getElementById('openSetlistModalBtn');
+    const setlistCountBadge = document.getElementById('setlistCountBadge');
+    const setlistNavBar = document.getElementById('setlistNavBar');
+    const btnPrevInSetlist = document.getElementById('btnPrevInSetlist');
+    const setlistPositionBtn = document.getElementById('setlistPositionBtn');
+    const setlistNameLabel = document.getElementById('setlistNameLabel');
+    const setlistPositionLabel = document.getElementById('setlistPositionLabel');
+    const btnNextInSetlist = document.getElementById('btnNextInSetlist');
+    const toggleSongInSetlistBtn = document.getElementById('toggleSongInSetlistBtn');
+    const toggleSetlistIcon = document.getElementById('toggleSetlistIcon');
+    const toggleSetlistText = document.getElementById('toggleSetlistText');
+
+    // Setlist modal elements
+    const setlistModal = document.getElementById('setlistModal');
+    const closeSetlistModalBtn = document.getElementById('closeSetlistModalBtn');
+    const setlistSelect = document.getElementById('setlistSelect');
+    const newSetlistNameInput = document.getElementById('newSetlistNameInput');
+    const createSetlistBtn = document.getElementById('createSetlistBtn');
+    const deleteSetlistBtn = document.getElementById('deleteSetlistBtn');
+    const setlistLibraryFilterInput = document.getElementById('setlistLibraryFilterInput');
+    const setlistLibraryList = document.getElementById('setlistLibraryList');
+    const currentSetlistHeaderTitle = document.getElementById('currentSetlistHeaderTitle');
+    const playFromFirstInSetlistBtn = document.getElementById('playFromFirstInSetlistBtn');
+    const setlistItemsList = document.getElementById('setlistItemsList');
+
+    // Add song modal elements
+    const openAddModalBtn = document.getElementById('openAddModalBtn');
+    const addSongModal = document.getElementById('addSongModal');
+    const closeAddModalBtn = document.getElementById('closeAddModalBtn');
+    const cancelAddModalBtn = document.getElementById('cancelAddModalBtn');
+    const addSongForm = document.getElementById('addSongForm');
+    const inputNewTitle = document.getElementById('inputNewTitle');
+    const inputNewArtist = document.getElementById('inputNewArtist');
+    const inputNewKey = document.getElementById('inputNewKey');
+    const inputNewLyrics = document.getElementById('inputNewLyrics');
+    const openEditModalBtn = document.getElementById('openEditModalBtn');
+    const addSongModalTitle = document.getElementById('addSongModalTitle');
+    const submitSongBtn = document.getElementById('submitSongBtn');
+    let editingSongId = null; // null = เพิ่มเพลงใหม่, มีค่า = กำลังแก้ไขเพลงนั้น
+
+    // Delete song modal elements
+    const openDeleteModalBtn = document.getElementById('openDeleteModalBtn');
+    const deleteSongModal = document.getElementById('deleteSongModal');
+    const deleteModalMessage = document.getElementById('deleteModalMessage');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    // Offline & Cloudflare elements
+    const openOfflineModalBtn = document.getElementById('openOfflineModalBtn');
+    const offlineModal = document.getElementById('offlineModal');
+    const closeOfflineModalBtn = document.getElementById('closeOfflineModalBtn');
+    const networkStatusDot = document.getElementById('networkStatusDot');
+    const modalNetworkDot = document.getElementById('modalNetworkDot');
+    const offlineSummaryTitle = document.getElementById('offlineSummaryTitle');
+    const offlineSummaryDetail = document.getElementById('offlineSummaryDetail');
+    const btnSaveBrowserOffline = document.getElementById('btnSaveBrowserOffline');
+    const btnDownloadStandaloneHtml = document.getElementById('btnDownloadStandaloneHtml');
+    const offlineActionFeedback = document.getElementById('offlineActionFeedback');
+    const cloudSyncHeaderLabel = document.getElementById('cloudSyncHeaderLabel');
+    const cfSyncStatusDetail = document.getElementById('cfSyncStatusDetail');
+    const btnCopyCfFunctionCode = document.getElementById('btnCopyCfFunctionCode');
+    const cfWorkerUrlInput = document.getElementById('cfWorkerUrlInput');
+    const btnSaveCfWorkerUrl = document.getElementById('btnSaveCfWorkerUrl');
+
+    /**
+     * =========================================================================
+     * 3. ระบบซิงค์ข้อมูลอัตโนมัติไปยัง Cloudflare Worker + KV
+     * =========================================================================
+     */
+    const CF_WORKER_URL_KEY = 'tablet_chord_reader_cf_worker_url';
+    const DEFAULT_CF_WORKER_URL = 'https://chords-api.pr0maxz.workers.dev';
+
+    const CF_FUNCTION_TEMPLATE = [
+      'export default {',
+      '  async fetch(request, env) {',
+      '    const corsHeaders = {',
+      '      "Access-Control-Allow-Origin": "*",',
+      '      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",',
+      '      "Access-Control-Allow-Headers": "Content-Type"',
+      '    };',
+      '',
+      '    if (request.method === "OPTIONS") {',
+      '      return new Response(null, { headers: corsHeaders });',
+      '    }',
+      '',
+      '    if (!env.CHORDS_KV) {',
+      '      return new Response(JSON.stringify({ error: "CHORDS_KV not bound" }), {',
+      '        status: 501,',
+      '        headers: { ...corsHeaders, "Content-Type": "application/json" }',
+      '      });',
+      '    }',
+      '',
+      '    if (request.method === "GET") {',
+      '      const raw = await env.CHORDS_KV.get("library_data");',
+      '      return new Response(raw || JSON.stringify({ songs: null, setlists: null }), {',
+      '        headers: { ...corsHeaders, "Content-Type": "application/json" }',
+      '      });',
+      '    }',
+      '',
+      '    if (request.method === "POST") {',
+      '      const body = await request.text();',
+      '      await env.CHORDS_KV.put("library_data", body);',
+      '      return new Response(JSON.stringify({ ok: true, updatedAt: Date.now() }), {',
+      '        headers: { ...corsHeaders, "Content-Type": "application/json" }',
+      '      });',
+      '    }',
+      '',
+      '    return new Response("Method not allowed", { status: 405, headers: corsHeaders });',
+      '  }',
+      '};'
+    ].join('\n');
+
+    let cfWorkerUrl = (localStorage.getItem(CF_WORKER_URL_KEY) || DEFAULT_CF_WORKER_URL).trim().replace(/\/+$/, '');
+    let cfConnected = false;
+    let cfSyncTimer = null;
+    const LOCAL_UPDATED_KEY = 'tablet_chord_reader_updated_at';
+    let localUpdatedAt = (() => {
+      try { return Number(localStorage.getItem(LOCAL_UPDATED_KEY)) || 0; } catch (e) { return 0; }
+    })();
+
+    function saveAllLocalData() {
+      localUpdatedAt = Date.now();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(songLibrary));
+        localStorage.setItem(SETLIST_STORAGE_KEY, JSON.stringify(setlists));
+        localStorage.setItem(LOCAL_UPDATED_KEY, String(localUpdatedAt));
+      } catch (e) {
+        console.warn('ไม่สามารถบันทึกข้อมูลลง LocalStorage ได้', e);
+      }
+      scheduleCloudflareSync();
+    }
+
+    function scheduleCloudflareSync() {
+      if (!cfWorkerUrl || !navigator.onLine) return;
+      if (cloudSyncHeaderLabel) {
+        cloudSyncHeaderLabel.textContent = 'กำลังส่งขึ้น CF...';
+      }
+      clearTimeout(cfSyncTimer);
+      cfSyncTimer = setTimeout(() => {
+        syncToCloudflare();
+      }, 400);
+    }
+
+    async function syncToCloudflare() {
+      if (!cfWorkerUrl || !navigator.onLine) return false;
+      try {
+        const res = await fetch(cfWorkerUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            songs: songLibrary,
+            setlists: setlists,
+            updatedAt: localUpdatedAt || Date.now()
+          })
+        });
+        if (res.ok) {
+          cfConnected = true;
+          if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'ซิงค์ CF แล้ว';
+          if (cfSyncStatusDetail) {
+            cfSyncStatusDetail.textContent = 'Cloudflare KV: เชื่อมต่อและบันทึกล่าสุดแล้ว (' + new Date().toLocaleTimeString('th-TH') + ')';
+            cfSyncStatusDetail.className = 'text-xs font-bold text-emerald-300 pt-0.5';
+          }
+          return true;
+        }
+      } catch (e) {
+        console.warn('ซิงค์ขึ้น Cloudflare Worker ไม่สำเร็จ:', e);
+      }
+      if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'บันทึกลงเครื่อง';
+      if (cfSyncStatusDetail) {
+        cfSyncStatusDetail.textContent = 'Cloudflare KV: ยังติดต่อ Worker ไม่ได้ (กำลังเก็บข้อมูลในเครื่องนี้)';
+        cfSyncStatusDetail.className = 'text-xs font-bold text-amber-300 pt-0.5';
+      }
+      return false;
+    }
+
+    async function loadFromCloudflare() {
+      if (!cfWorkerUrl || !navigator.onLine) return false;
+      try {
+        const res = await fetch(cfWorkerUrl, { cache: 'no-store' });
+        if (!res.ok) return false;
+        const data = await res.json();
+        cfConnected = true;
+
+        const cloudUpdated = Number(data && data.updatedAt) || 0;
+        const cloudSongs = data && Array.isArray(data.songs) ? data.songs.filter(isValidSong) : [];
+
+        if (cloudSongs.length > 0 && localUpdatedAt > cloudUpdated) {
+          // ข้อมูลในเครื่องใหม่กว่าบนคลาวด์ (เช่น เพิ่มเพลงตอนออฟไลน์) ให้ส่งขึ้นไปแทนการทับ
+          await syncToCloudflare();
+        } else if (cloudSongs.length > 0) {
+          songLibrary = cloudSongs;
+          localUpdatedAt = cloudUpdated;
+          try { localStorage.setItem(LOCAL_UPDATED_KEY, String(cloudUpdated)); } catch (e) {}
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(songLibrary));
+
+          if (Array.isArray(data.setlists) && data.setlists.length > 0) {
+            setlists = data.setlists;
+            localStorage.setItem(SETLIST_STORAGE_KEY, JSON.stringify(setlists));
+            if (!setlists.some((s) => s.id === activeSetlistId)) {
+              activeSetlistId = setlists[0].id;
+            }
+          }
+
+          if (!songLibrary.some((s) => s.id === currentSongId)) {
+            currentSongId = songLibrary[0].id;
+            transposeOffset = 0;
+          }
+
+          renderSong();
+          renderSearchDropdown();
+          updateSetlistUI();
+        } else {
+          // หากบน CF ยังว่างอยู่ ให้ส่งคลังเพลงปัจจุบันขึ้นไปตั้งต้นทันที
+          await syncToCloudflare();
+        }
+
+        if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'ซิงค์ CF แล้ว';
+        if (cfSyncStatusDetail) {
+          cfSyncStatusDetail.textContent = 'Cloudflare KV: เชื่อมต่อแล้ว (ซิงค์อัตโนมัติทุกครั้งที่เพิ่ม/แก้เพลง)';
+          cfSyncStatusDetail.className = 'text-xs font-bold text-emerald-300 pt-0.5';
+        }
+        return true;
+      } catch (e) {
+        if (cloudSyncHeaderLabel) cloudSyncHeaderLabel.textContent = 'บันทึกลงเครื่อง';
+        if (cfSyncStatusDetail) {
+          cfSyncStatusDetail.textContent = 'Cloudflare KV: ยังไม่ได้เชื่อมต่อ Worker (กำลังเก็บข้อมูลในเครื่องนี้)';
+          cfSyncStatusDetail.className = 'text-xs font-bold text-sky-300 pt-0.5';
+        }
+        return false;
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 4. ระบบทฤษฎีดนตรีและทรานสโพสคีย์ทั้งเพลง (Transpose Engine)
+     * =========================================================================
+     */
+    const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const NOTES_FLAT  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    const NOTE_TO_SEMITONE = {
+      'C': 0, 'B#': 0,
+      'C#': 1, 'Db': 1,
+      'D': 2,
+      'D#': 3, 'Eb': 3,
+      'E': 4, 'Fb': 4,
+      'F': 5, 'E#': 5,
+      'F#': 6, 'Gb': 6,
+      'G': 7,
+      'G#': 8, 'Ab': 8,
+      'A': 9,
+      'A#': 10, 'Bb': 10,
+      'B': 11, 'Cb': 11
+    };
+
+    const RELATIVE_MINOR = {
+      'C': 'Am', 'C#': 'A#m', 'Db': 'Bbm', 'D': 'Bm', 'D#': 'Cm', 'Eb': 'Cm',
+      'E': 'C#m', 'F': 'Dm', 'F#': 'D#m', 'Gb': 'Ebm', 'G': 'Em',
+      'G#': 'Fm', 'Ab': 'Fm', 'A': 'F#m', 'A#': 'Gm', 'Bb': 'Gm', 'B': 'G#m'
+    };
+
+    function transposeNote(noteStr, semitones, preferFlat = false) {
+      if (!noteStr || !(noteStr in NOTE_TO_SEMITONE)) return noteStr;
+      const baseIndex = NOTE_TO_SEMITONE[noteStr];
+      const newIndex = ((baseIndex + semitones) % 12 + 12) % 12;
+      const useFlat = preferFlat || noteStr.includes('b') || (flatSpellingOverride && semitones !== 0);
+      return useFlat ? NOTES_FLAT[newIndex] : NOTES_SHARP[newIndex];
+    }
+
+    function transposeSingleChord(chordStr, semitones) {
+      if (!chordStr || semitones === 0) return chordStr;
+      const match = chordStr.match(/^([A-G][#b]?)(.*?)(?:\/([A-G][#b]?))?$/);
+      if (!match) return chordStr;
+
+      const [, rootNote, quality, bassNote] = match;
+      const newRoot = transposeNote(rootNote, semitones, rootNote.includes('b'));
+      const newBass = bassNote ? '/' + transposeNote(bassNote, semitones, bassNote.includes('b')) : '';
+      return newRoot + quality + newBass;
+    }
+
+    function transposeLine(lineStr, semitones) {
+      if (semitones === 0) return lineStr;
+      return lineStr.replace(/\b([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)\b/g, (m) => {
+        return transposeSingleChord(m, semitones);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 5. ระบบแปลงเนื้อเพลงและคอร์ดทุกรูปแบบ (Chord Parser & Stanza Grouping)
+     * =========================================================================
+     */
+    const CHORD_TOKEN_REGEX = /^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?$/;
+    const INLINE_CHORD_REGEX = /\[([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)\]|([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)/g;
+
+    function isChordOnlyLine(line) {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      if (/^(INTRO|INSTRU|SOLO|OUTRO)\b/i.test(trimmed)) return false;
+      const tokens = trimmed.replace(/[|()\-–—:]/g, ' ').trim().split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) return false;
+      const chordCount = tokens.filter((t) => CHORD_TOKEN_REGEX.test(t)).length;
+      return chordCount > 0 && (chordCount / tokens.length) >= 0.75;
+    }
+
+    function parseTwoLinePair(chordLine, lyricLine) {
+      const chordMatches = [];
+      const regex = /([A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?[0-9]*(?:\/[A-G][#b]?)?)/g;
+      let match;
+      while ((match = regex.exec(chordLine)) !== null) {
+        chordMatches.push({ chord: match[1], index: match.index });
+      }
+
+      if (chordMatches.length === 0) {
+        return [{ chord: '', lyric: lyricLine }];
+      }
+
+      // ปรับจุดตัดไม่ให้ผ่ากลางสระลอยหรือวรรณยุกต์ภาษาไทย
+      const thaiCombiningRegex = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
+      const snapToSafeCluster = (str, idx) => {
+        let pos = Math.min(idx, str.length);
+        while (pos > 0 && pos < str.length && thaiCombiningRegex.test(str[pos])) {
+          pos--;
+        }
+        return pos;
+      };
+
+      const paddedLyric = lyricLine.length < chordLine.length
+        ? lyricLine.padEnd(chordLine.length, ' ')
+        : lyricLine;
+
+      const tokens = [];
+      let cursor = 0;
+
+      chordMatches.forEach((item, idx) => {
+        const start = snapToSafeCluster(paddedLyric, item.index);
+        if (start > cursor) {
+          tokens.push({ chord: '', lyric: paddedLyric.slice(cursor, start) });
+        }
+        const nextStart = idx + 1 < chordMatches.length
+          ? snapToSafeCluster(paddedLyric, chordMatches[idx + 1].index)
+          : paddedLyric.length;
+        const segment = paddedLyric.slice(start, nextStart);
+        tokens.push({ chord: item.chord, lyric: segment });
+        cursor = nextStart;
+      });
+
+      return tokens.map((t, i) => (i === tokens.length - 1 ? { ...t, lyric: t.lyric.replace(/\s+$/, '') } : t));
+    }
+
+    function parseInlineBracketOrBareChords(line) {
+      const tokens = [];
+      let lastIndex = 0;
+      let pendingChord = '';
+      const thaiCombiningRegex = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
+      INLINE_CHORD_REGEX.lastIndex = 0;
+
+      let match;
+      while ((match = INLINE_CHORD_REGEX.exec(line)) !== null) {
+        const chordFound = match[1] || match[2];
+        const matchStart = match.index;
+
+        // ป้องกันการจับตัวอักษรภาษาอังกฤษทั่วไปในคำภาษาอังกฤษที่ไม่ใช่คอร์ด
+        if (!match[1]) {
+          const prevChar = matchStart > 0 ? line[matchStart - 1] : '';
+          const nextChar = line[matchStart + match[0].length] || '';
+          if (/[a-zA-Z]/.test(prevChar) || /[a-zA-Z]/.test(nextChar)) {
+            continue;
+          }
+        }
+
+        let textBetween = line.slice(lastIndex, matchStart);
+        let trailingCombining = '';
+        // หากคอร์ดแทรกอยู่หน้าสระลอย/วรรณยุกต์ (เช่น คิ[G]ด -> คิ + ์) ให้ดึงสระกลับไปติดพยัญชนะเดิม
+        while (textBetween.length > 0 && thaiCombiningRegex.test(textBetween[textBetween.length - 1])) {
+          trailingCombining = textBetween[textBetween.length - 1] + trailingCombining;
+          textBetween = textBetween.slice(0, -1);
+        }
+
+        if (tokens.length > 0 && trailingCombining) {
+          tokens[tokens.length - 1].lyric += trailingCombining;
+          trailingCombining = '';
+        }
+
+        if (textBetween.length > 0 || pendingChord) {
+          tokens.push({ chord: pendingChord, lyric: textBetween });
+          pendingChord = '';
+        }
+
+        pendingChord = chordFound;
+        lastIndex = matchStart + match[0].length;
+      }
+
+      let remainingText = line.slice(lastIndex);
+      if (tokens.length > 0 && remainingText.length > 0 && thaiCombiningRegex.test(remainingText[0])) {
+        let leadingComb = '';
+        while (remainingText.length > 0 && thaiCombiningRegex.test(remainingText[0])) {
+          leadingComb += remainingText[0];
+          remainingText = remainingText.slice(1);
+        }
+        tokens[tokens.length - 1].lyric += leadingComb;
+      }
+
+      if (remainingText.length > 0 || pendingChord) {
+        tokens.push({ chord: pendingChord, lyric: remainingText });
+      }
+
+      return tokens.length > 0 ? tokens : [{ chord: '', lyric: line }];
+    }
+
+    function parseSongLyricsToStanzas(rawLyrics) {
+      // ลบบรรทัดว่างเดี่ยวๆ ที่คั่นระหว่างบรรทัดร้องเพื่อให้ท่อนเพลงไม่แตกเป็นกล่องทีละ 1 แถว
+      const rawLines = rawLyrics.replace(/\r\n/g, '\n').split('\n');
+      const cleanedLines = [];
+      for (let i = 0; i < rawLines.length; i++) {
+        const curr = rawLines[i];
+        if (curr.trim() === '') {
+          const prevNonEmpty = cleanedLines.length > 0 ? cleanedLines[cleanedLines.length - 1] : '';
+          const nextLine = rawLines[i + 1] || '';
+          if (prevNonEmpty && nextLine.trim() !== '' && !/^(INTRO|INSTRU|SOLO|OUTRO|\*)/i.test(nextLine.trim())) {
+            continue;
+          }
+        }
+        cleanedLines.push(curr);
+      }
+
+      const parsedRows = [];
+      let i = 0;
+      while (i < cleanedLines.length) {
+        const line = cleanedLines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          parsedRows.push({ type: 'break' });
+          i++;
+          continue;
+        }
+
+        if (/^(INTRO|INSTRU|SOLO|OUTRO)\b/i.test(trimmed)) {
+          parsedRows.push({ type: 'instru', text: trimmed });
+          i++;
+          continue;
+        }
+
+        if (/^\(\s*ซ้ำ.*\)$/i.test(trimmed)) {
+          parsedRows.push({ type: 'repeat', text: trimmed });
+          i++;
+          continue;
+        }
+
+        // กรณีคอร์ดอยู่บรรทัดบน และเนื้อเพลงอยู่บรรทัดล่าง
+        if (isChordOnlyLine(line) && i + 1 < cleanedLines.length) {
+          const nextLine = cleanedLines[i + 1];
+          if (nextLine.trim() && !isChordOnlyLine(nextLine) && !/^(INTRO|INSTRU|SOLO|OUTRO|\(\s*ซ้ำ)/i.test(nextLine.trim())) {
+            parsedRows.push({
+              type: 'lyric',
+              isChorusStart: /^\*/.test(nextLine.trim()),
+              tokens: parseTwoLinePair(line, nextLine)
+            });
+            i += 2;
+            continue;
+          }
+        }
+
+        // กรณีคอร์ดแทรกอยู่ในบรรทัดเดียวกัน (เช่น [A]น้อง หรือ ไอ้Aน้อง)
+        parsedRows.push({
+          type: 'lyric',
+          isChorusStart: /^\*/.test(trimmed),
+          tokens: parseInlineBracketOrBareChords(line)
+        });
+        i++;
+      }
+
+      // จัดกลุ่มแถวเป็น Stanza Cards (กลุ่มละ ~4 บรรทัด)
+      const stanzas = [];
+      let currentGroup = [];
+
+      const flushGroup = () => {
+        if (currentGroup.length > 0) {
+          stanzas.push(currentGroup);
+          currentGroup = [];
+        }
+      };
+
+      parsedRows.forEach((row) => {
+        if (row.type === 'break') {
+          flushGroup();
+          return;
+        }
+        if (row.type === 'instru') {
+          flushGroup();
+          stanzas.push([row]);
+          return;
+        }
+        if (row.isChorusStart && currentGroup.length >= 1) {
+          flushGroup();
+        }
+        currentGroup.push(row);
+        if (currentGroup.length >= 4) {
+          flushGroup();
+        }
+      });
+      flushGroup();
+
+      return stanzas;
+    }
+
+    /**
+     * =========================================================================
+     * 6. ระบบแสดงผลหน้าเดียว & Auto-Fit (No-Scroll Single Screen Engine)
+     * =========================================================================
+     */
+    function getActiveSong() {
+      return songLibrary.find((s) => s.id === currentSongId) || songLibrary[0];
+    }
+
+    function updateTransposeHeader() {
+      const song = getActiveSong();
+      if (!song) return;
+
+      const root = song.originalRoot || 'C';
+      const sub = song.originalSub || RELATIVE_MINOR[root] || '';
+      const transposedRoot = transposeNote(root, transposeOffset);
+      const transposedSub = sub ? transposeSingleChord(sub, transposeOffset) : '';
+
+      currentKeyDisplay.textContent = transposedSub
+        ? `Key ${transposedRoot} (${transposedSub})`
+        : `Key ${transposedRoot}`;
+
+      if (transposeOffset === 0) {
+        semitoneDisplay.textContent = 'คีย์ต้นฉบับ (0)';
+      } else {
+        const sign = transposeOffset > 0 ? '+' : '';
+        semitoneDisplay.textContent = `ปรับคีย์ ${sign}${transposeOffset} ครึ่งเสียง`;
+      }
+
+      originalKeyBadge.textContent = sub
+        ? `ต้นฉบับ: Key ${root} (${sub})`
+        : `ต้นฉบับ: Key ${root}`;
+    }
+
+    let currentCards = [];
+
+    function buildStanzaCard(stanzaRows) {
+      const card = document.createElement('div');
+      card.className = 'stanza-card';
+
+      stanzaRows.forEach((row) => {
+        if (row.type === 'instru') {
+          const instruDiv = document.createElement('div');
+          instruDiv.className = 'instru-row';
+          const transposedText = transposeLine(row.text, transposeOffset);
+          const parts = transposedText.split(/(\s+|\|)/);
+          parts.forEach((part) => {
+            if (!part) return;
+            if (part === '|') {
+              const pipe = document.createElement('span');
+              pipe.className = 'instru-pipe';
+              pipe.textContent = '|';
+              instruDiv.appendChild(pipe);
+            } else if (CHORD_TOKEN_REGEX.test(part.trim())) {
+              const badge = document.createElement('span');
+              badge.className = 'chord-tag';
+              badge.textContent = part.trim();
+              instruDiv.appendChild(badge);
+            } else if (part.trim()) {
+              const label = document.createElement('span');
+              label.className = 'instru-tag';
+              label.textContent = part.trim();
+              instruDiv.appendChild(label);
+            }
+          });
+          card.appendChild(instruDiv);
+        } else if (row.type === 'repeat') {
+          const repDiv = document.createElement('div');
+          repDiv.className = 'repeat-row';
+          repDiv.textContent = row.text;
+          card.appendChild(repDiv);
+        } else if (row.type === 'lyric') {
+          const lyricRowDiv = document.createElement('div');
+          lyricRowDiv.className = 'lyric-row';
+          const lineHasAnyChord = row.tokens.some((t) => t.chord);
+
+          // แตกแต่ละช่วงคอร์ดเป็นคำ ๆ แล้วจัดกลุ่ม: ตัดบรรทัดได้เฉพาะหลังช่องว่างเท่านั้น
+          // คอร์ดที่คั่นกลางคำจึงไม่ทำให้คำถูกตัดแยกไปคนละบรรทัด
+          const atoms = [];
+          row.tokens.forEach((token) => {
+            const text = token.lyric || (token.chord ? ' ' : '');
+            const pieces = text.match(/\s*\S+\s*|\s+/g) || [text];
+            pieces.forEach((piece, idx) => {
+              atoms.push({ chord: idx === 0 ? token.chord : null, text: piece });
+            });
+          });
+
+          let groupEl = null;
+          atoms.forEach((atom) => {
+            if (!groupEl) {
+              groupEl = document.createElement('span');
+              groupEl.className = 'word-group';
+              lyricRowDiv.appendChild(groupEl);
+            }
+
+            const unit = document.createElement('span');
+            unit.className = 'token-unit';
+
+            if (lineHasAnyChord) {
+              const slot = document.createElement('span');
+              slot.className = 'chord-slot';
+              if (atom.chord) {
+                const tag = document.createElement('span');
+                tag.className = 'chord-tag';
+                tag.textContent = transposeSingleChord(atom.chord, transposeOffset);
+                slot.appendChild(tag);
+              }
+              unit.appendChild(slot);
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'lyric-syllable';
+            textSpan.textContent = atom.text;
+            unit.appendChild(textSpan);
+
+            groupEl.appendChild(unit);
+            if (/\s$/.test(atom.text)) groupEl = null;
+          });
+
+          card.appendChild(lyricRowDiv);
+        }
+      });
+
+      return card;
+    }
+
+    function renderSong() {
+      const song = getActiveSong();
+      if (!song) return;
+
+      if (song.id !== lastRenderedSongId) {
+        lastRenderedSongId = song.id;
+        clearKeySignatureInputs();
+      }
+      songTitleEl.textContent = song.title;
+      songArtistEl.textContent = song.artist || 'ไม่ระบุศิลปิน';
+      updateTransposeHeader();
+      updateSetlistUI();
+
+      currentCards = parseSongLyricsToStanzas(song.lyrics).map(buildStanzaCard);
+      fitSongToSingleScreen();
+    }
+
+    function ensureSongColumns(numCols) {
+      if (songContentGrid.children.length !== numCols) {
+        songContentGrid.innerHTML = '';
+        for (let c = 0; c < numCols; c++) {
+          const colDiv = document.createElement('div');
+          colDiv.className = 'song-col';
+          songContentGrid.appendChild(colDiv);
+        }
+      }
+      songContentGrid.style.gridTemplateColumns = `repeat(${numCols}, minmax(0, 1fr))`;
+      return Array.from(songContentGrid.children);
+    }
+
+    // วัดความสูงจริงของทุกท่อนที่ความกว้างคอลัมน์และขนาดฟอนต์นั้น ๆ
+    function measureSongCards(numCols, fontPx) {
+      const cols = ensureSongColumns(numCols);
+      songContentGrid.style.setProperty('--fit-font-size', `${fontPx}px`);
+      currentCards.forEach((card) => cols[0].appendChild(card));
+      const heights = currentCards.map((card) => card.getBoundingClientRect().height);
+      const gap = parseFloat(getComputedStyle(cols[0]).rowGap) || 0;
+      const overflowX = cols[0].scrollWidth > cols[0].clientWidth + 1;
+      return { cols, heights, gap, overflowX };
+    }
+
+    // เรียงท่อนตามลำดับร้อง เติมคอลัมน์ทีละคอลัมน์ไม่ให้เกินความสูงที่กำหนด
+    function packSongCards(heights, gap, capacity) {
+      const groups = [];
+      let cur = [];
+      let curH = 0;
+      heights.forEach((h, i) => {
+        if (cur.length === 0) {
+          cur = [i];
+          curH = h;
+        } else if (curH + gap + h <= capacity) {
+          cur.push(i);
+          curH += gap + h;
+        } else {
+          groups.push(cur);
+          cur = [i];
+          curH = h;
+        }
+      });
+      if (cur.length > 0) groups.push(cur);
+      return groups;
+    }
+
+    function songFits(numCols, fontPx, availHeight) {
+      const m = measureSongCards(numCols, fontPx);
+      if (m.overflowX) return false;
+      if (Math.max(...m.heights) > availHeight) return false;
+      return packSongCards(m.heights, m.gap, availHeight).length <= numCols;
+    }
+
+    function fitSongToSingleScreen() {
+      lyricsViewport.style.overflowY = 'hidden';
+      const availHeight = lyricsViewport.clientHeight;
+      const availWidth = lyricsViewport.clientWidth;
+      if (!availHeight || !availWidth || currentCards.length === 0) return;
+
+      const MIN_FONT = 9;
+      const MAX_FONT = 48;
+      const maxCols = Math.max(1, Math.min(4, Math.floor(availWidth / 240)));
+
+      // ลองทุกจำนวนคอลัมน์ แล้วเลือกแบบที่ได้ตัวอักษรใหญ่ที่สุดโดยไม่ต้องเลื่อนจอ
+      let bestCols = 1;
+      let bestFont = 0;
+      for (let n = 1; n <= maxCols; n++) {
+        let low = MIN_FONT;
+        let high = MAX_FONT;
+        let found = 0;
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          if (songFits(n, mid, availHeight)) {
+            found = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+        if (found > bestFont) {
+          bestFont = found;
+          bestCols = n;
+        }
+      }
+
+      let overflowFallback = false;
+      if (bestFont === 0) {
+        overflowFallback = true;
+        bestFont = MIN_FONT;
+        bestCols = maxCols;
+      }
+
+      // จัดวางจริงที่ขนาดหนึ่ง แล้วตรวจซ้ำว่าไม่ล้นทั้งแนวนอนและแนวตั้ง
+      const applyLayout = (fontPx) => {
+        const m = measureSongCards(bestCols, fontPx);
+        const totalHeight = m.heights.reduce((a, h) => a + h + m.gap, 0);
+
+        let lo = Math.max(...m.heights);
+        let hi = overflowFallback ? totalHeight : availHeight;
+        if (packSongCards(m.heights, m.gap, hi).length > bestCols) hi = Math.max(totalHeight, lo);
+        for (let i = 0; i < 14; i++) {
+          const mid = (lo + hi) / 2;
+          if (packSongCards(m.heights, m.gap, mid).length <= bestCols) hi = mid;
+          else lo = mid;
+        }
+
+        // เกลี่ยท่อนลงแต่ละคอลัมน์ให้สมดุลกัน
+        const groups = packSongCards(m.heights, m.gap, hi);
+        groups.forEach((idxs, c) => {
+          idxs.forEach((i) => m.cols[Math.min(c, bestCols - 1)].appendChild(currentCards[i]));
+        });
+
+        const tallest = Math.max(...m.cols.map((col) => col.scrollHeight));
+        const overflowX = m.cols.some((col) => col.scrollWidth > col.clientWidth + 1);
+        return { tallest, ok: !overflowX && tallest <= availHeight + 1 };
+      };
+
+      // A− / A+ ปรับเป็นสัดส่วนของขนาดที่พอดีหน้าจอ (100% = ใหญ่สุดที่ยังไม่ต้องเลื่อน)
+      let fontPx = Math.max(8, Math.round(bestFont * userFontMultiplier));
+      let result = applyLayout(fontPx);
+      while (!result.ok && fontPx > 8) {
+        fontPx -= 1;
+        result = applyLayout(fontPx);
+      }
+
+      lyricsViewport.style.overflowY = result.tallest > availHeight + 1 ? 'auto' : 'hidden';
+    }
+
+    /**
+     * =========================================================================
+     * 7. ระบบค้นหาเพลงแบบเรียลไทม์ (Search Engine)
+     * =========================================================================
+     */
+    function renderSearchDropdown(query = '') {
+      const q = query.trim().toLowerCase();
+      const filtered = songLibrary.filter((s) =>
+        s.title.toLowerCase().includes(q) || (s.artist && s.artist.toLowerCase().includes(q))
+      );
+
+      searchDropdown.innerHTML = '';
+      if (filtered.length === 0) {
+        searchDropdown.innerHTML = `<div class="p-4 text-center text-sm text-slate-400">ไม่พบเพลงที่ตรงกับ "${escapeHtml(query)}"</div>`;
+        return;
+      }
+
+      filtered.forEach((song) => {
+        const isCurrent = song.id === currentSongId;
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.className = `w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-[#1f2738] transition cursor-pointer ${isCurrent ? 'bg-[#1a2130]' : ''}`;
+        itemBtn.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-sm sm:text-base font-extrabold ${isCurrent ? 'text-amber-400' : 'text-white'} truncate">${escapeHtml(song.title)}</div>
+            <div class="text-xs text-slate-400 truncate">${escapeHtml(song.artist || 'ไม่ระบุศิลปิน')}</div>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-extrabold shrink-0">
+            Key ${escapeHtml(song.originalRoot || 'C')}
+          </span>
+        `;
+        itemBtn.addEventListener('click', () => {
+          currentSongId = song.id;
+          transposeOffset = 0;
+          searchDropdown.classList.add('hidden');
+          renderSong();
+        });
+        searchDropdown.appendChild(itemBtn);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 8. ระบบจัดลิสต์เพลง (Setlist Manager)
+     * =========================================================================
+     */
+    function getActiveSetlist() {
+      return setlists.find((s) => s.id === activeSetlistId) || setlists[0];
+    }
+
+    function updateSetlistUI() {
+      const activeList = getActiveSetlist();
+      if (!activeList) return;
+
+      // กรองเฉพาะ ID เพลงที่ยังมีอยู่ในคลัง
+      activeList.songIds = activeList.songIds.filter((id) => songLibrary.some((s) => s.id === id));
+      setlistCountBadge.textContent = activeList.songIds.length;
+
+      const idxInList = activeList.songIds.indexOf(currentSongId);
+      const isInList = idxInList !== -1;
+
+      if (isInList) {
+        toggleSetlistIcon.textContent = '✓';
+        toggleSetlistText.textContent = 'อยู่ในลิสต์';
+        toggleSongInSetlistBtn.className = 'h-9 px-3 rounded-full bg-sky-500/20 hover:bg-sky-500/30 active:scale-95 border border-sky-500/40 text-sky-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer';
+      } else {
+        toggleSetlistIcon.textContent = '+';
+        toggleSetlistText.textContent = 'ใส่ลิสต์';
+        toggleSongInSetlistBtn.className = 'h-9 px-3 rounded-full bg-[#1a2130] hover:bg-slate-800 active:scale-95 border border-[#2d384d] text-slate-300 text-xs font-bold flex items-center gap-1 transition cursor-pointer';
+      }
+
+      if (isInList && activeList.songIds.length > 0) {
+        setlistNavBar.classList.remove('hidden');
+        setlistNavBar.classList.add('flex');
+        setlistNameLabel.textContent = activeList.name;
+        setlistPositionLabel.textContent = `เพลงที่ ${idxInList + 1} / ${activeList.songIds.length}`;
+      } else {
+        setlistNavBar.classList.add('hidden');
+        setlistNavBar.classList.remove('flex');
+      }
+    }
+
+    function renderSetlistModalContent() {
+      const activeList = getActiveSetlist();
+      if (!activeList) return;
+
+      // 1. Dropdown เลือกลิสต์
+      setlistSelect.innerHTML = '';
+      setlists.forEach((list) => {
+        const opt = document.createElement('option');
+        opt.value = list.id;
+        opt.textContent = `${list.name} (${list.songIds.length} เพลง)`;
+        if (list.id === activeList.id) opt.selected = true;
+        setlistSelect.appendChild(opt);
+      });
+
+      // 2. ฝั่งซ้าย: คลังเพลงทั้งหมด
+      const filterQ = setlistLibraryFilterInput.value.trim().toLowerCase();
+      const filteredSongs = songLibrary.filter((s) =>
+        s.title.toLowerCase().includes(filterQ) || (s.artist && s.artist.toLowerCase().includes(filterQ))
+      );
+
+      setlistLibraryList.innerHTML = '';
+      filteredSongs.forEach((song) => {
+        const alreadyIn = activeList.songIds.includes(song.id);
+        const row = document.createElement('div');
+        row.className = 'py-2.5 px-2 flex items-center justify-between gap-2';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="text-xs sm:text-sm font-bold text-white truncate">${escapeHtml(song.title)}</div>
+            <div class="text-[11px] text-slate-400 truncate">${escapeHtml(song.artist || 'ไม่ระบุศิลปิน')} • Key ${escapeHtml(song.originalRoot || 'C')}</div>
+          </div>
+          <button
+            type="button"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-extrabold shrink-0 cursor-pointer ${
+              alreadyIn
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/35'
+                : 'bg-sky-500 hover:bg-sky-400 text-slate-950'
+            }"
+          >
+            ${alreadyIn ? '✓ อยู่ในลิสต์' : '+ เพิ่มเข้าลิสต์'}
+          </button>
+        `;
+        row.querySelector('button').addEventListener('click', () => {
+          if (!alreadyIn) {
+            activeList.songIds.push(song.id);
+          } else {
+            activeList.songIds = activeList.songIds.filter((id) => id !== song.id);
+          }
+          saveAllLocalData();
+          updateSetlistUI();
+          renderSetlistModalContent();
+        });
+        setlistLibraryList.appendChild(row);
+      });
+
+      // 3. ฝั่งขวา: ลำดับเพลงในลิสต์ปัจจุบัน
+      currentSetlistHeaderTitle.textContent = `ลำดับเพลงใน "${activeList.name}" (${activeList.songIds.length} เพลง)`;
+      setlistItemsList.innerHTML = '';
+
+      if (activeList.songIds.length === 0) {
+        setlistItemsList.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">ยังไม่มีเพลงในลิสต์นี้ กด "+ เพิ่มเข้าลิสต์" จากฝั่งซ้ายได้เลย</div>`;
+        return;
+      }
+
+      activeList.songIds.forEach((songId, index) => {
+        const song = songLibrary.find((s) => s.id === songId);
+        if (!song) return;
+
+        const itemRow = document.createElement('div');
+        itemRow.className = 'py-2.5 px-2 flex items-center justify-between gap-2';
+        itemRow.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer play-trigger">
+            <span class="w-6 h-6 rounded-md bg-sky-500/20 text-sky-300 text-xs font-extrabold flex items-center justify-center shrink-0">
+              ${index + 1}
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs sm:text-sm font-bold text-white truncate">${escapeHtml(song.title)}</div>
+              <div class="text-[11px] text-slate-400 truncate">Key ${escapeHtml(song.originalRoot || 'C')}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" class="move-up w-7 h-7 rounded bg-[#131822] hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer" title="เลื่อนขึ้น">↑</button>
+            <button type="button" class="move-down w-7 h-7 rounded bg-[#131822] hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer" title="เลื่อนลง">↓</button>
+            <button type="button" class="remove-item w-7 h-7 rounded bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 text-xs font-bold cursor-pointer" title="เอาออกจากลิสต์">✕</button>
+          </div>
+        `;
+
+        itemRow.querySelector('.play-trigger').addEventListener('click', () => {
+          currentSongId = song.id;
+          transposeOffset = 0;
+          setlistModal.classList.add('hidden');
+          renderSong();
+        });
+
+        itemRow.querySelector('.move-up').addEventListener('click', () => {
+          if (index > 0) {
+            const temp = activeList.songIds[index - 1];
+            activeList.songIds[index - 1] = activeList.songIds[index];
+            activeList.songIds[index] = temp;
+            saveAllLocalData();
+            updateSetlistUI();
+            renderSetlistModalContent();
+          }
+        });
+
+        itemRow.querySelector('.move-down').addEventListener('click', () => {
+          if (index < activeList.songIds.length - 1) {
+            const temp = activeList.songIds[index + 1];
+            activeList.songIds[index + 1] = activeList.songIds[index];
+            activeList.songIds[index] = temp;
+            saveAllLocalData();
+            updateSetlistUI();
+            renderSetlistModalContent();
+          }
+        });
+
+        itemRow.querySelector('.remove-item').addEventListener('click', () => {
+          activeList.songIds.splice(index, 1);
+          saveAllLocalData();
+          updateSetlistUI();
+          renderSetlistModalContent();
+        });
+
+        setlistItemsList.appendChild(itemRow);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 9. ระบบตรวจจับคีย์อัตโนมัติ (Auto Key Detection) & เพิ่ม/ลบเพลง
+     * =========================================================================
+     */
+    function detectSongKey(rawLyrics) {
+      const matches = rawLyrics.match(/\[([A-G][#b]?m?)\]|(?:\b([A-G][#b]?m?)\b)/g) || [];
+      const firstChord = matches.map((m) => m.replace(/[\[\]]/g, '')).find((c) => /^[A-G][#b]?m?$/.test(c));
+      if (!firstChord) return { root: 'C', sub: 'Am' };
+
+      if (firstChord.endsWith('m')) {
+        const minorRoot = firstChord.slice(0, -1);
+        const majorRoot = transposeNote(minorRoot, 3);
+        return { root: majorRoot, sub: firstChord };
+      }
+      return { root: firstChord, sub: RELATIVE_MINOR[firstChord] || '' };
+    }
+
+    /**
+     * =========================================================================
+     * 10. ระบบบันทึกลงเครื่อง & ดาวน์โหลดไฟล์ออฟไลน์ (Offline & Standalone HTML)
+     * =========================================================================
+     */
+    function updateNetworkUI() {
+      const online = navigator.onLine;
+      if (online) {
+        networkStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0';
+        modalNetworkDot.className = 'w-3 h-3 rounded-full bg-emerald-400';
+        offlineSummaryTitle.textContent = 'สถานะ: ออนไลน์ (พร้อมซิงค์และบันทึกลง Tablet)';
+        offlineSummaryTitle.className = 'text-sm font-extrabold text-emerald-300';
+      } else {
+        networkStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0';
+        modalNetworkDot.className = 'w-3 h-3 rounded-full bg-amber-400';
+        offlineSummaryTitle.textContent = 'สถานะ: ออฟไลน์ (กำลังใช้งานจากข้อมูลในเครื่อง)';
+        offlineSummaryTitle.className = 'text-sm font-extrabold text-amber-300';
+      }
+      offlineSummaryDetail.textContent = `คลังเพลงปัจจุบันมี ${songLibrary.length} เพลง และ ${setlists.length} ลิสต์เพลง`;
+    }
+
+    // ตรวจว่าแอปเปิดตอนไม่มีอินเทอร์เน็ตได้จริงหรือไม่ (Service Worker + ไฟล์ในแคช)
+    async function checkOfflineReady() {
+      if (!/^https?:$/.test(location.protocol)) {
+        return { ready: false, reason: 'เปิดจากไฟล์ในเครื่อง ต้องเปิดผ่านเว็บ https ที่อัปโหลดไว้ (เช่น Cloudflare Pages)' };
+      }
+      if (!('serviceWorker' in navigator) || !('caches' in window)) {
+        return { ready: false, reason: 'เบราว์เซอร์นี้ไม่รองรับการใช้งานออฟไลน์ ลองเปิดด้วย Safari หรือ Chrome' };
+      }
+      try {
+        let reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) reg = await navigator.serviceWorker.register('sw.js');
+        await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+        ]);
+      } catch (e) {
+        return { ready: false, reason: 'ติดตั้ง Service Worker ไม่สำเร็จ ตรวจว่าอัปโหลดไฟล์ sw.js ไว้โฟลเดอร์เดียวกับ index.html แล้ว' };
+      }
+      const names = (await caches.keys()).filter((k) => k.startsWith('chord-reader-'));
+      if (names.length === 0) {
+        return { ready: false, reason: 'ยังไม่มีไฟล์ถูกเก็บไว้ ให้ปิดแล้วเปิดแอปใหม่ตอนมีเน็ต แล้วกดปุ่มนี้อีกครั้ง' };
+      }
+      const cache = await caches.open(names[names.length - 1]);
+      const externals = [
+        'https://cdn.tailwindcss.com',
+        'https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap'
+      ];
+      for (const url of externals) {
+        if (await cache.match(url)) continue;
+        try {
+          await cache.put(url, await fetch(new Request(url, { mode: 'no-cors' })));
+        } catch (e) {}
+      }
+      if (!(await cache.match(new URL('./', location.href).href))) {
+        return { ready: false, reason: 'ยังไม่ได้เก็บหน้าแอปไว้ ให้รีเฟรชหน้านี้หนึ่งครั้งตอนมีเน็ต แล้วกดปุ่มนี้อีกครั้ง' };
+      }
+      if (!(await cache.match(externals[0]))) {
+        return { ready: false, reason: 'ยังเก็บไฟล์ Tailwind ไม่ได้ (ต้องออนไลน์ตอนกดปุ่มนี้) หน้าจะแสดงผลเพี้ยนตอนออฟไลน์' };
+      }
+      if (!navigator.serviceWorker.controller) {
+        return { ready: false, reason: 'Service Worker ยังไม่ได้ควบคุมหน้านี้ ให้รีเฟรชหน้าหนึ่งครั้งแล้วกดปุ่มนี้อีกครั้ง' };
+      }
+      return { ready: true, reason: '' };
+    }
+
+    function showOfflineFeedback(msg) {
+      offlineActionFeedback.textContent = msg;
+      offlineActionFeedback.classList.remove('hidden');
+    }
+
+    async function downloadStandaloneOfflineHtml() {
+      let baseHtml = '';
+      try {
+        const res = await fetch(window.location.href, { cache: 'no-store' });
+        if (res.ok) baseHtml = await res.text();
+      } catch (e) {}
+      if (!baseHtml || baseHtml.indexOf('id="songContentGrid"') === -1) {
+        baseHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      }
+
+      const tailwindTag = '<script src="https://cdn.tailwindcss.com"><\/script>';
+      try {
+        const twRes = await fetch('https://cdn.tailwindcss.com');
+        if (twRes.ok) {
+          const twCode = (await twRes.text()).replace(/<\/script/gi, '<\\/script');
+          baseHtml = baseHtml.replace(tailwindTag, () => '<script>' + twCode + '<\/script>');
+        }
+      } catch (e) {}
+
+      const safeJson = (v) => JSON.stringify(JSON.stringify(v)).replace(/</g, '\\u003c');
+      const seed = '<script>try {' +
+        'if (!localStorage.getItem(' + JSON.stringify(STORAGE_KEY) + ')) {' +
+        'localStorage.setItem(' + JSON.stringify(STORAGE_KEY) + ', ' + safeJson(songLibrary) + ');' +
+        'localStorage.setItem(' + JSON.stringify(SETLIST_STORAGE_KEY) + ', ' + safeJson(setlists) + ');' +
+        '}} catch (e) {}<\/script>';
+      baseHtml = baseHtml.replace('<head>', () => '<head>\n' + seed);
+
+      const blob = new Blob([baseHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tablet-chords-offline.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    /**
+     * =========================================================================
+     * 11. ผูก Event Listeners ทั้งหมด
+     * =========================================================================
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      // โหลดค่าเริ่มต้น
+      if (cfWorkerUrlInput) cfWorkerUrlInput.value = cfWorkerUrl;
+      updateNetworkUI();
+      renderSong();
+      if (document.fonts) {
+        document.fonts.ready.then(() => renderSong());
+        if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => renderSong());
+      }
+      window.addEventListener('load', () => renderSong());
+      loadFromCloudflare();
+
+      // ค้นหาเพลง
+      searchInput.addEventListener('focus', () => {
+        renderSearchDropdown(searchInput.value);
+        searchDropdown.classList.remove('hidden');
+      });
+
+      searchInput.addEventListener('input', () => {
+        const val = searchInput.value;
+        clearSearchBtn.classList.toggle('hidden', val.length === 0);
+        clearSearchBtn.classList.toggle('flex', val.length > 0);
+        renderSearchDropdown(val);
+        searchDropdown.classList.remove('hidden');
+      });
+
+      clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearSearchBtn.classList.add('hidden');
+        clearSearchBtn.classList.remove('flex');
+        renderSearchDropdown('');
+        searchInput.focus();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!searchContainer.contains(e.target)) {
+          searchDropdown.classList.add('hidden');
+        }
+      });
+
+      // ปรับขนาดตัวอักษร A- / A+
+      btnFontDown.addEventListener('click', () => {
+        userFontMultiplier = Math.max(0.5, +(userFontMultiplier - 0.1).toFixed(2));
+        fontScaleLabel.textContent = `${Math.round(userFontMultiplier * 100)}%`;
+        fitSongToSingleScreen();
+      });
+
+      btnFontUp.addEventListener('click', () => {
+        userFontMultiplier = Math.min(1, +(userFontMultiplier + 0.1).toFixed(2));
+        fontScaleLabel.textContent = `${Math.round(userFontMultiplier * 100)}%`;
+        fitSongToSingleScreen();
+      });
+
+      // ทรานสโพสทั้งเพลง
+      btnTransposeDown.addEventListener('click', () => {
+        transposeOffset -= 1;
+        clearKeySignatureInputs();
+        renderSong();
+      });
+
+      btnTransposeUp.addEventListener('click', () => {
+        transposeOffset += 1;
+        clearKeySignatureInputs();
+        renderSong();
+      });
+
+      btnTransposeReset.addEventListener('click', () => {
+        transposeOffset = 0;
+        clearKeySignatureInputs();
+        renderSong();
+      });
+
+      // เลื่อนเพลงใน Setlist (ปุ่มใหญ่บนหน้าหลัก)
+      btnPrevInSetlist.addEventListener('click', () => {
+        const activeList = getActiveSetlist();
+        if (!activeList || activeList.songIds.length === 0) return;
+        const idx = activeList.songIds.indexOf(currentSongId);
+        const prevIdx = (idx - 1 + activeList.songIds.length) % activeList.songIds.length;
+        currentSongId = activeList.songIds[prevIdx];
+        transposeOffset = 0;
+        renderSong();
+      });
+
+      btnNextInSetlist.addEventListener('click', () => {
+        const activeList = getActiveSetlist();
+        if (!activeList || activeList.songIds.length === 0) return;
+        const idx = activeList.songIds.indexOf(currentSongId);
+        const nextIdx = (idx + 1) % activeList.songIds.length;
+        currentSongId = activeList.songIds[nextIdx];
+        transposeOffset = 0;
+        renderSong();
+      });
+
+      setlistPositionBtn.addEventListener('click', () => {
+        renderSetlistModalContent();
+        setlistModal.classList.remove('hidden');
+      });
+
+      toggleSongInSetlistBtn.addEventListener('click', () => {
+        const activeList = getActiveSetlist();
+        if (!activeList) return;
+        const idx = activeList.songIds.indexOf(currentSongId);
+        if (idx === -1) {
+          activeList.songIds.push(currentSongId);
+        } else {
+          activeList.songIds.splice(idx, 1);
+        }
+        saveAllLocalData();
+        updateSetlistUI();
+      });
+
+      // หน้าต่างจัดลิสต์เพลง (Setlist Modal)
+      openSetlistModalBtn.addEventListener('click', () => {
+        renderSetlistModalContent();
+        setlistModal.classList.remove('hidden');
+      });
+
+      closeSetlistModalBtn.addEventListener('click', () => {
+        setlistModal.classList.add('hidden');
+      });
+
+      setlistSelect.addEventListener('change', () => {
+        activeSetlistId = setlistSelect.value;
+        updateSetlistUI();
+        renderSetlistModalContent();
+      });
+
+      setlistLibraryFilterInput.addEventListener('input', () => {
+        renderSetlistModalContent();
+      });
+
+      createSetlistBtn.addEventListener('click', () => {
+        const name = newSetlistNameInput.value.trim();
+        if (!name) return;
+        const newList = {
+          id: 'setlist-' + Date.now(),
+          name: name,
+          songIds: []
+        };
+        setlists.push(newList);
+        activeSetlistId = newList.id;
+        newSetlistNameInput.value = '';
+        saveAllLocalData();
+        updateSetlistUI();
+        renderSetlistModalContent();
+      });
+
+      deleteSetlistBtn.addEventListener('click', () => {
+        if (setlists.length <= 1) return;
+        setlists = setlists.filter((s) => s.id !== activeSetlistId);
+        activeSetlistId = setlists[0].id;
+        saveAllLocalData();
+        updateSetlistUI();
+        renderSetlistModalContent();
+      });
+
+      playFromFirstInSetlistBtn.addEventListener('click', () => {
+        const activeList = getActiveSetlist();
+        if (!activeList || activeList.songIds.length === 0) return;
+        currentSongId = activeList.songIds[0];
+        transposeOffset = 0;
+        setlistModal.classList.add('hidden');
+        renderSong();
+      });
+
+      // หน้าต่างเพิ่มเพลง (Add Song Modal)
+      openAddModalBtn.addEventListener('click', () => {
+        editingSongId = null;
+        addSongForm.reset();
+        addSongModalTitle.textContent = 'เพิ่มเพลงใหม่ลงคลัง';
+        submitSongBtn.textContent = 'บันทึกเพลง';
+        addSongModal.classList.remove('hidden');
+        inputNewTitle.focus();
+      });
+
+      // แก้ไขเพลงที่เปิดอยู่: ใช้หน้าต่างเดียวกับเพิ่มเพลง แต่เติมข้อมูลเดิมให้
+      openEditModalBtn.addEventListener('click', () => {
+        const song = getActiveSong();
+        if (!song) return;
+        editingSongId = song.id;
+        addSongForm.reset();
+        inputNewTitle.value = song.title || '';
+        inputNewArtist.value = song.artist && song.artist !== 'ไม่ระบุศิลปิน' ? song.artist : '';
+        const hasKeyOption = Array.from(inputNewKey.options).some((o) => o.value === song.originalRoot);
+        inputNewKey.value = hasKeyOption ? song.originalRoot : 'AUTO';
+        inputNewLyrics.value = song.lyrics || '';
+        addSongModalTitle.textContent = 'แก้ไขเพลง';
+        submitSongBtn.textContent = 'บันทึกการแก้ไข';
+        addSongModal.classList.remove('hidden');
+        inputNewTitle.focus();
+      });
+
+      const closeAddModal = () => {
+        addSongModal.classList.add('hidden');
+        editingSongId = null;
+      };
+      closeAddModalBtn.addEventListener('click', closeAddModal);
+      cancelAddModalBtn.addEventListener('click', closeAddModal);
+
+      addSongForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = inputNewTitle.value.trim();
+        const artist = inputNewArtist.value.trim() || 'ไม่ระบุศิลปิน';
+        const lyrics = inputNewLyrics.value.trim();
+        if (!title || !lyrics) return;
+
+        const editingSong = editingSongId ? songLibrary.find((x) => x.id === editingSongId) : null;
+
+        let root = inputNewKey.value;
+        let sub = '';
+        if (root === 'AUTO') {
+          const detected = detectSongKey(lyrics);
+          root = detected.root;
+          sub = detected.sub;
+        } else if (editingSong && editingSong.originalRoot === root && editingSong.originalSub) {
+          sub = editingSong.originalSub; // คีย์ไม่เปลี่ยน ใช้ค่าเดิมของเพลง
+        } else {
+          sub = RELATIVE_MINOR[root] || '';
+        }
+
+        if (editingSong) {
+          editingSong.title = title;
+          editingSong.artist = artist;
+          editingSong.originalRoot = root;
+          editingSong.originalSub = sub;
+          editingSong.lyrics = lyrics;
+          currentSongId = editingSong.id;
+          saveAllLocalData();
+          closeAddModal();
+          renderSong();
+          return;
+        }
+
+        const newSong = {
+          id: 'song-' + Date.now(),
+          title,
+          artist,
+          originalRoot: root,
+          originalSub: sub,
+          lyrics
+        };
+
+        songLibrary.unshift(newSong);
+        currentSongId = newSong.id;
+        transposeOffset = 0;
+        saveAllLocalData();
+        closeAddModal();
+        renderSong();
+      });
+
+      // หน้าต่างลบเพลง (Delete Song Modal)
+      openDeleteModalBtn.addEventListener('click', () => {
+        const song = getActiveSong();
+        if (!song) return;
+        deleteModalMessage.textContent = `ต้องการลบเพลง "${song.title}" ออกจากคลังใช่หรือไม่?`;
+        deleteSongModal.classList.remove('hidden');
+      });
+
+      cancelDeleteBtn.addEventListener('click', () => {
+        deleteSongModal.classList.add('hidden');
+      });
+
+      confirmDeleteBtn.addEventListener('click', () => {
+        if (songLibrary.length <= 1) {
+          deleteSongModal.classList.add('hidden');
+          return;
+        }
+        const deletedId = currentSongId;
+        songLibrary = songLibrary.filter((s) => s.id !== deletedId);
+        setlists.forEach((list) => {
+          list.songIds = list.songIds.filter((id) => id !== deletedId);
+        });
+        currentSongId = songLibrary[0].id;
+        transposeOffset = 0;
+        saveAllLocalData();
+        deleteSongModal.classList.add('hidden');
+        renderSong();
+      });
+
+      // หน้าต่างซิงค์ Cloudflare & บันทึกลงเครื่อง (Offline Modal)
+      openOfflineModalBtn.addEventListener('click', () => {
+        updateNetworkUI();
+        offlineActionFeedback.classList.add('hidden');
+        offlineModal.classList.remove('hidden');
+      });
+
+      closeOfflineModalBtn.addEventListener('click', () => {
+        offlineModal.classList.add('hidden');
+      });
+
+      btnSaveBrowserOffline.addEventListener('click', async () => {
+        showOfflineFeedback('กำลังบันทึกเพลงและตรวจสอบการใช้งานออฟไลน์...');
+        await loadFromCloudflare();
+        saveAllLocalData();
+        const songsMsg = `เพลง ${songLibrary.length} เพลงถูกบันทึกลงเครื่องแล้ว`;
+        const status = await checkOfflineReady();
+        if (status.ready) {
+          showOfflineFeedback(`✓ ${songsMsg} และแอปพร้อมเปิดใช้งานได้โดยไม่ต้องมีอินเทอร์เน็ต`);
+        } else {
+          showOfflineFeedback(`⚠ ${songsMsg} แต่แอปยังเปิดตอนออฟไลน์ไม่ได้: ${status.reason}`);
+        }
+      });
+
+      btnDownloadStandaloneHtml.addEventListener('click', async () => {
+        showOfflineFeedback('กำลังเตรียมไฟล์ออฟไลน์ (รวม Tailwind ไว้ในไฟล์)...');
+        await downloadStandaloneOfflineHtml();
+        showOfflineFeedback('✓ กำลังดาวน์โหลดไฟล์ tablet-chords-offline.html พร้อมเพลงทั้งหมดในตัว');
+      });
+
+      btnCopyCfFunctionCode.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(CF_FUNCTION_TEMPLATE);
+        } catch (err) {
+          const tempArea = document.createElement('textarea');
+          tempArea.value = CF_FUNCTION_TEMPLATE;
+          document.body.appendChild(tempArea);
+          tempArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempArea);
+        }
+        showOfflineFeedback('✓ คัดลอกโค้ด Cloudflare Worker เรียบร้อยแล้ว นำไปวางใน Edit code ของ Worker ได้เลย');
+      });
+
+      btnSaveCfWorkerUrl.addEventListener('click', async () => {
+        const urlVal = cfWorkerUrlInput.value.trim().replace(/\/+$/, '');
+        if (!urlVal) return;
+        cfWorkerUrl = urlVal;
+        localStorage.setItem(CF_WORKER_URL_KEY, cfWorkerUrl);
+        showOfflineFeedback('กำลังทดสอบการเชื่อมต่อกับ Cloudflare Worker...');
+        const ok = await loadFromCloudflare();
+        if (ok) {
+          showOfflineFeedback('✓ เชื่อมต่อ Cloudflare Worker สำเร็จ! ระบบจะซิงค์เพลงอัตโนมัติ');
+        } else {
+          showOfflineFeedback('⚠ ยังติดต่อ Worker ไม่ได้ กรุณาตรวจสอบว่า Deploy โค้ด Worker และผูก KV ชื่อ CHORDS_KV แล้ว');
+        }
+      });
+
+      window.addEventListener('online', () => {
+        updateNetworkUI();
+        loadFromCloudflare();
+      });
+      window.addEventListener('offline', updateNetworkUI);
+
+      // คำนวณคีย์จากจำนวนแฟลต/ชาร์ป บนแถบเมนู (1 แฟลต = F, 1 ชาร์ป = G) แล้วทรานสโพสเพลงไปที่คีย์นั้น
+      const FLAT_KEYS = ['C', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'B']; // 7 แฟลต = Cb ซึ่งเสียงเท่ากับ B
+      const SHARP_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#'];
+      const keySigFields = {
+        flat: { input: document.getElementById('inputFlatCount'), result: document.getElementById('flatKeyResult'), keys: FLAT_KEYS },
+        sharp: { input: document.getElementById('inputSharpCount'), result: document.getElementById('sharpKeyResult'), keys: SHARP_KEYS }
+      };
+
+      function applyKeySignature(kind) {
+        const field = keySigFields[kind];
+        const other = keySigFields[kind === 'flat' ? 'sharp' : 'flat'];
+        const raw = field.input.value.trim();
+        const n = parseInt(raw, 10);
+        if (raw === '' || Number.isNaN(n) || n < 0 || n > 7) {
+          field.result.textContent = '–';
+          return;
+        }
+        const song = getActiveSong();
+        if (!song) return;
+        other.input.value = '';
+        other.result.textContent = '–';
+
+        const key = field.keys[n];
+        field.result.textContent = kind === 'flat' && n === 7 ? 'Cb' : key;
+
+        let diff = ((NOTE_TO_SEMITONE[key] - NOTE_TO_SEMITONE[song.originalRoot || 'C']) % 12 + 12) % 12;
+        if (diff > 6) diff -= 12;
+        transposeOffset = diff;
+        flatSpellingOverride = kind === 'flat' && n >= 1 && n <= 6;
+        renderSong();
+      }
+
+      keySigFields.flat.input.addEventListener('input', () => applyKeySignature('flat'));
+      keySigFields.sharp.input.addEventListener('input', () => applyKeySignature('sharp'));
+
+      // ปิดหน้าต่างด้วย Esc / แตะพื้นหลัง (ยกเว้นหน้าต่างเพิ่มเพลง กันเนื้อเพลงที่พิมพ์ค้างหาย)
+      const allModals = [deleteSongModal, addSongModal, setlistModal, offlineModal];
+      [deleteSongModal, setlistModal, offlineModal].forEach((m) => {
+        m.addEventListener('click', (e) => { if (e.target === m) m.classList.add('hidden'); });
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        allModals.forEach((m) => m.classList.add('hidden'));
+        searchDropdown.classList.add('hidden');
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const first = searchDropdown.querySelector('button');
+        if (first) first.click();
+      });
+
+      // ปรับขนาดอัตโนมัติเมื่อหมุนจอ Tablet (Portrait <-> Landscape)
+      let resizeTimeout = null;
+      const handleResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          renderSong();
+        }, 80);
+      };
+      window.addEventListener('resize', handleResize);
+      if ('ResizeObserver' in window) {
+        let lastVpW = 0;
+        let lastVpH = 0;
+        const ro = new ResizeObserver(() => {
+          const w = lyricsViewport.clientWidth;
+          const h = lyricsViewport.clientHeight;
+          if (w === lastVpW && h === lastVpH) return;
+          lastVpW = w;
+          lastVpH = h;
+          handleResize();
+        });
+        ro.observe(lyricsViewport);
+      }
+    });
+  </script>
+  <script>
+    // PWA: ลงทะเบียน Service Worker (ทำงานเฉพาะเมื่อเปิดผ่าน https หรือ localhost)
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch((err) => console.warn('ลงทะเบียน Service Worker ไม่สำเร็จ', err));
+      });
+    }
+  </script>
+</body>
+</html>
